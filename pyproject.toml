@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cfsam"
+version = "0.0.0"
+description = "cFS Application Manager: import a cFS mission into mission.yaml and validate it"
+readme = "CLAUDE.md"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Rico Kim" }]
+requires-python = ">=3.10"
+dependencies = ["ruamel.yaml"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+# The cfsam package (src/cfsam) and its console script are added with the MVP.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
