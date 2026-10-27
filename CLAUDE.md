@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository status
 
-This repository (`cfsam`, MIT-licensed) contains no source code yet. The planned MVP is a Python CLI that imports a cFS mission's apps, topic IDs, MIDs and startup script into `mission.yaml` and validates them (read-only); config generation is a later stage. Update this file once code, build commands, and architecture exist.
+This repository (`cfsam`, Apache-2.0) contains no source code yet. The planned MVP is a Python CLI that imports a cFS mission's apps, topic IDs, MIDs and startup script into `mission.yaml` and validates them (read-only); config generation is a later stage. Update this file once code, build commands, and architecture exist.
 
 ## Working rules
 
@@ -12,6 +12,7 @@ This repository (`cfsam`, MIT-licensed) contains no source code yet. The planned
 - Target cFS: the bundle in `../` as checked out — branch `dev` @ `d2f1477` (components report v7.0.2 + 1 dev commit). Do not change its checkout.
 - Default import variant: `SIMULATION=native`, EDS off.
 - Ask before installing packages, using the network, running builds, committing, pushing, or opening PRs.
+- License: Apache-2.0 (`LICENSE`, `NOTICE`). Start every new source file with `# SPDX-License-Identifier: Apache-2.0` (or the file type's comment syntax). Files copied from cFS keep their original NASA header and are marked as modified.
 
 ## Context: surrounding cFS bundle
 
