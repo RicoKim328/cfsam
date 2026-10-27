@@ -1,21 +1,31 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# Handoff (harness, 2026-10-28)
+# Handoff (post-merge, 2026-10-28)
 
 Rewrite this file when a task finishes. Items under "Awaiting approval" are
 not approvals; ask Rico.
 
 ## State
 
-- Branch `harness` (worktree `.claude/worktrees/harness`), based on `main` @
-  `d92e023` (PR #1 merge: CLAUDE.md, working rules, Apache-2.0). Harness
-  committed and pushed to `origin/harness`; PR #2 (`harness` → `main`,
-  https://github.com/RicoKim328/cfsam/pull/2) is open, not merged.
+- Harness merged: PR #2 → `main` @ `3632918` (merge commit; Rico merged it
+  outside Claude Code, since the auto-mode classifier denies agent merges).
+  Branch `harness` was deleted (local and remote). Its stale
+  `[branch "harness"]` section stays in `.git/config` (the sandbox protects
+  that file).
+- Not yet removed (sandbox / classifier blocked the agent; Rico does it
+  outside Claude Code): the `init-claude-md` worktree, the local branch
+  `worktree-init-claude-md` and its remote. All are merged into `main` and clean.
+- Worktree `.claude/worktrees/harness` remains (directory name only); it is on
+  branch `handoff-post-merge` (from `origin/main`), which holds this file's
+  update and is not pushed.
+- The local `main` checkout (`cfsam/`) is behind `origin/main`; Rico pulls it.
 - Harness: `.claude/settings.json` (Bash sandbox + guard hook),
   `.claude/hooks/guard_cfs_readonly.py`, `.claude/skills/{cfs-reference,add-validation-rule}`,
   `.claude/agents/cfs-fact-checker.md`, `pyproject.toml`, `tests/conftest.py`,
   `tests/test_harness.py`, `tests/fixtures/cfs_sample/`, `.gitignore` additions.
-- `python3 -m pytest -q` → 103 passed (system Python 3.10, user-installed pytest;
-  no venv, ruamel.yaml not installed).
+- `.venv` (worktree root, gitignored) made with the user-installed
+  `virtualenv` (system `python3 -m venv` lacks ensurepip/`python3.10-venv`):
+  ruamel.yaml 0.19.1, pytest 9.1.1. `.venv/bin/python -m pytest -q` → 103 passed.
+  A new worktree needs its own `.venv` (`python3 -m virtualenv .venv`).
 - Bash sandbox is configured (`enabled`, `failIfUnavailable`,
   `allowUnsandboxedCommands: false`; bubblewrap + socat installed) and
   **verified** 2026-10-28 after a restart: writes to `~/Desktop` and to the
@@ -41,7 +51,8 @@ not approvals; ask Rico.
   line, Development workflow section, build line "run by Rico from the bundle
   root (`! make …`)", `@HANDOFF.md` at the end. The original draft text was
   lost; the applied text was rebuilt from the decisions below.
-- Codex stop-time review gate is on for the `harness` and `init-claude-md` worktrees.
+- Codex stop-time review gate was on for the `harness` and `init-claude-md`
+  worktrees; check it for whichever worktree the MVP uses.
 
 ## Decisions
 
@@ -65,12 +76,15 @@ not approvals; ask Rico.
 
 ## Next
 
-1. Rico reviews and merges PR #2.
-2. Create `.venv`, install `ruamel.yaml` + pytest.
+1. Push `handoff-post-merge` and open its PR (this HANDOFF update).
+2. Rico (outside Claude Code): `git worktree remove .claude/worktrees/init-claude-md`,
+   `git branch -d worktree-init-claude-md`, `git push origin --delete worktree-init-claude-md`.
 3. MVP: mission.yaml schema, importer for `cfs_sample`, first golden snapshot.
 
 ## Awaiting approval
 
-- Merging PR #2.
-- `.venv` creation and package installs; builds; MVP implementation.
-- Removing the `init-claude-md` worktree or remote branch `worktree-init-claude-md`.
+- Pushing `handoff-post-merge`; its PR.
+- MVP implementation; further package installs; builds.
+- Merges and remote branch deletion: the auto-mode classifier denies them to
+  agents; Rico runs them outside Claude Code. The sandbox also blocks deleting
+  other worktrees' directories and writing `.git/config`.
