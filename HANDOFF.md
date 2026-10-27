@@ -13,19 +13,29 @@ not approvals; ask Rico.
   `.claude/hooks/guard_cfs_readonly.py`, `.claude/skills/{cfs-reference,add-validation-rule}`,
   `.claude/agents/cfs-fact-checker.md`, `pyproject.toml`, `tests/conftest.py`,
   `tests/test_harness.py`, `tests/fixtures/cfs_sample/`, `.gitignore` additions.
-- `python3 -m pytest -q` → 100 passed (system Python 3.10, user-installed pytest;
+- `python3 -m pytest -q` → 103 passed (system Python 3.10, user-installed pytest;
   no venv, ruamel.yaml not installed).
 - Bash sandbox is configured (`enabled`, `failIfUnavailable`,
-  `allowUnsandboxedCommands: false`; bubblewrap + socat installed) but
-  **not yet verified**: settings load at session start, and the session that
-  added it still wrote outside the worktree. Verify after a restart.
+  `allowUnsandboxedCommands: false`; bubblewrap + socat installed) and
+  **verified** 2026-10-28 after a restart: writes to `~/Desktop` and to the
+  cfsam main checkout fail with "Read-only file system"; writes in the
+  worktree and `$TMPDIR` (`/tmp/claude-1000`) succeed. The bundle was not probed.
+- The sandbox only covers Bash; Edit/Write are not sandboxed (the guard hook
+  covers them).
+- Sandbox placeholders: bubblewrap creates `/dev/null` char devices in the
+  worktree for protected config paths (`.bashrc`, `.gitconfig`, `.mcp.json`,
+  `.idea`, `.vscode`, `.claude/commands`, ...). They show as untracked; never
+  commit them and do not gitignore them (Rico). Stage files by name, never
+  `git add -A`.
 - Guard hook (secondary layer) is allowlist-based after seven Codex
   stop-review rounds: a Bash segment touching the bundle must be read-only or
   a plain copy out of it; env/`~`/brace/glob expansion (not for names the
   command assigns), subshell-scoped cd, quoted $(...)/backtick bodies and
   for-loop variables are handled; non-read commands with targets it can't
   resolve are blocked. It also blocks bundle builds. It is a best-effort
-  parser: code inside script files is not seen.
+  parser: code inside script files is not seen. `$TMPDIR` unset in the hook's
+  env resolves to the sandbox's `/tmp/claude-<uid>`; a bare `TMPDIR` word in
+  the command (possible reassignment) still leaves it unresolved.
 - CLAUDE.md diff is drafted (handoff lines, `@HANDOFF.md`, Development
   workflow incl. build line, line 21), not applied; Rico confirms it in-session.
 - Codex stop-time review gate is on for the `harness` and `init-claude-md` worktrees.
@@ -47,16 +57,15 @@ not approvals; ask Rico.
 - Fixtures are unmodified bundle copies at bundle-relative paths; tests never
   read the real bundle.
 - No golden snapshots yet: mission.yaml schema is undecided.
+- 2026-10-28: Guard hook treats `/tmp/claude-<uid>` as the safe `$TMPDIR`;
+  sandbox placeholders are not gitignored; commits stage files by name.
 
 ## Next
 
-1. Restart the session in this worktree; run `/sandbox` and try a Bash write
-   outside the worktree (e.g. `touch ~/Desktop/sandbox-probe`): it must fail.
-   Never probe inside the bundle.
-2. Rico reviews the CLAUDE.md diff and applies or approves it; commit it.
-3. Open the harness PR.
-4. Create `.venv`, install `ruamel.yaml` + pytest.
-5. MVP: mission.yaml schema, importer for `cfs_sample`, first golden snapshot.
+1. Rico reviews the CLAUDE.md diff and applies or approves it; commit it.
+2. Open the harness PR.
+3. Create `.venv`, install `ruamel.yaml` + pytest.
+4. MVP: mission.yaml schema, importer for `cfs_sample`, first golden snapshot.
 
 ## Awaiting approval
 

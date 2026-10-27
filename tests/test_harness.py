@@ -182,6 +182,21 @@ def test_guard_uses_untouched_environment(layout, command, blocked):
     assert result.returncode == (2 if blocked else 0), result.stderr
 
 
+@pytest.mark.parametrize(
+    "command, blocked",
+    [
+        ("touch \"$TMPDIR/probe\" && rm \"$TMPDIR/probe\"", False),
+        ("echo hi > ${TMPDIR}/x", False),
+        ("TMPDIR=..; rm -rf $TMPDIR/cfe", True),  # reassigned: not the sandbox value
+    ],
+)
+def test_guard_resolves_sandbox_tmpdir(layout, command, blocked):
+    """TMPDIR unset in the hook's env resolves to the sandbox's /tmp/claude-<uid>."""
+    bundle, cfsam = layout
+    result = run_hook(cfsam, "Bash", {"command": command}, cwd=cfsam)
+    assert result.returncode == (2 if blocked else 0), result.stderr
+
+
 def test_guard_ignores_other_tools(layout):
     bundle, cfsam = layout
     result = run_hook(cfsam, "Read", {"file_path": str(bundle / "cfe" / "x.c")}, cwd=cfsam)

@@ -69,6 +69,9 @@ def cfsam_root(hook_file: Path) -> Path:
 # Variables the current command may (re)assign; their hook-time environment
 # values are stale, so they are left unexpanded (= unresolved). Set per command.
 VOLATILE: set[str] = set()
+# Set only inside Claude Code's Bash sandbox, not in the hook's environment.
+# Its sandbox value is outside the bundle, so it resolves to that when unset here.
+SANDBOX_DEFAULTS = {"TMPDIR": f"/tmp/claude-{os.getuid()}"}
 
 
 def bare_names(command: str) -> set[str]:
@@ -83,7 +86,7 @@ def expand(arg: str) -> str:
         name = m.group(1) or m.group(2)
         if name in VOLATILE:
             return m.group(0)
-        return os.environ.get(name, m.group(0))
+        return os.environ.get(name, SANDBOX_DEFAULTS.get(name, m.group(0)))
 
     # ~ is $HOME (also after = and : as in assignments), so it goes stale with HOME.
     arg = os.path.expanduser(re.sub(r"(^|[=:])~(?=/|$)", r"\1$HOME", arg))
