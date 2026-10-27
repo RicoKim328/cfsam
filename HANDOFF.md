@@ -8,7 +8,8 @@ not approvals; ask Rico.
 
 - Branch `harness` (worktree `.claude/worktrees/harness`), based on `main` @
   `d92e023` (PR #1 merge: CLAUDE.md, working rules, Apache-2.0). Harness
-  committed and pushed to `origin/harness`; no PR yet.
+  committed and pushed to `origin/harness`; PR #2 (`harness` → `main`,
+  https://github.com/RicoKim328/cfsam/pull/2) is open, not merged.
 - Harness: `.claude/settings.json` (Bash sandbox + guard hook),
   `.claude/hooks/guard_cfs_readonly.py`, `.claude/skills/{cfs-reference,add-validation-rule}`,
   `.claude/agents/cfs-fact-checker.md`, `pyproject.toml`, `tests/conftest.py`,
@@ -36,8 +37,10 @@ not approvals; ask Rico.
   parser: code inside script files is not seen. `$TMPDIR` unset in the hook's
   env resolves to the sandbox's `/tmp/claude-<uid>`; a bare `TMPDIR` word in
   the command (possible reassignment) still leaves it unresolved.
-- CLAUDE.md diff is drafted (handoff lines, `@HANDOFF.md`, Development
-  workflow incl. build line, line 21), not applied; Rico confirms it in-session.
+- CLAUDE.md update applied 2026-10-28 (Rico confirmed in-session): Handoff
+  line, Development workflow section, build line "run by Rico from the bundle
+  root (`! make …`)", `@HANDOFF.md` at the end. The original draft text was
+  lost; the applied text was rebuilt from the decisions below.
 - Codex stop-time review gate is on for the `harness` and `init-claude-md` worktrees.
 
 ## Decisions
@@ -53,7 +56,7 @@ not approvals; ask Rico.
   write scope is relied on.
 - 2026-10-28: CLAUDE.md hook line says "Bundle builds are run by Rico
   (`! make …`)" and line 21 says build commands "are run by Rico from the
-  bundle root (`! make …`)"; approved, pending Rico's in-session check.
+  bundle root (`! make …`)"; applied after Rico's in-session check.
 - Fixtures are unmodified bundle copies at bundle-relative paths; tests never
   read the real bundle.
 - No golden snapshots yet: mission.yaml schema is undecided.
@@ -62,13 +65,12 @@ not approvals; ask Rico.
 
 ## Next
 
-1. Rico reviews the CLAUDE.md diff and applies or approves it; commit it.
-2. Open the harness PR.
-3. Create `.venv`, install `ruamel.yaml` + pytest.
-4. MVP: mission.yaml schema, importer for `cfs_sample`, first golden snapshot.
+1. Rico reviews and merges PR #2.
+2. Create `.venv`, install `ruamel.yaml` + pytest.
+3. MVP: mission.yaml schema, importer for `cfs_sample`, first golden snapshot.
 
 ## Awaiting approval
 
-- CLAUDE.md edit; PR.
+- Merging PR #2.
 - `.venv` creation and package installs; builds; MVP implementation.
 - Removing the `init-claude-md` worktree or remote branch `worktree-init-claude-md`.
