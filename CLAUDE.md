@@ -4,7 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository status
 
-This repository (`cfsam`, MIT-licensed) is newly initialized and contains no source code, build files, or tests yet — only `LICENSE`. Update this file once code, build commands, and architecture exist.
+This repository (`cfsam`, MIT-licensed) contains no source code yet. The planned MVP is a Python CLI that imports a cFS mission's apps, topic IDs, MIDs and startup script into `mission.yaml` and validates them (read-only); config generation is a later stage. Update this file once code, build commands, and architecture exist.
+
+## Working rules
+
+- Tool code lives in this repo. The cFS source in `../` is read-only reference material: do not modify any file there (including its git metadata).
+- Target cFS: the bundle in `../` as checked out — branch `dev` @ `d2f1477` (components report v7.0.2 + 1 dev commit). Do not change its checkout.
+- Default import variant: `SIMULATION=native`, EDS off.
+- Ask before installing packages, using the network, running builds, committing, pushing, or opening PRs.
 
 ## Context: surrounding cFS bundle
 
