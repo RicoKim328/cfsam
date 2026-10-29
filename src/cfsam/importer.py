@@ -84,6 +84,7 @@ def import_mission(root: Path, mission_config: str = "sample", simulation: str =
         apps.append({"name": name, "path": bundle.rel(app_dir), "topics": topics})
 
     core_api = _locate_module(bundle, ev, search_path, "core_api")
+    sb = _locate_module(bundle, ev, search_path, "sb")
     startup = _StartupScript(bundle)
     out_cpus = []
     for cpu in cpus:
@@ -102,6 +103,7 @@ def import_mission(root: Path, mission_config: str = "sample", simulation: str =
                 "platform": cpu["platform"],
                 "apps": cpu["apps"],
                 "mid_base": mid_base,
+                "sb_highest_valid_msgid": _sb_highest_valid_msgid(bundle, sb, prefixes, cpu["name"]),
                 "mids": mids,
                 "startup": startup.entries(cpu["apps"]),
             }
@@ -275,6 +277,28 @@ def _mid_bases(bundle: Bundle, core: cpp.MacroTable, cpu: str) -> dict:
                 bundle.warn(f"{cpu}: MID base {key}: {exc}")
                 bases[key] = None
     return bases
+
+
+def _sb_highest_valid_msgid(bundle: Bundle, sb: Path | None, prefixes: list[str], cpu: str) -> Hex | None:
+    # cfe/modules/sb/fsw/inc/cfe_sb_internal_cfg.h:155-156 defines it through
+    # CFE_PLATFORM_SB_CFGVAL from cfe_sb_internal_cfg_values.h, a per-CPU config
+    # file (cfe/modules/sb/arch_build.cmake). A mission that replaces
+    # cfe_sb_platform_cfg.h wholesale is not followed.
+    macro = "CFE_PLATFORM_SB_HIGHEST_VALID_MSGID"
+    table = cpp.MacroTable()
+    internal = sb / "fsw" / "inc" / "cfe_sb_internal_cfg.h" if sb is not None else None
+    if internal is None or not internal.is_file():
+        bundle.warn(f"{cpu}: {macro}: cfe/modules/sb/fsw/inc/cfe_sb_internal_cfg.h not found")
+        return None
+    table.add(cpp.read_header(internal, bundle.rel(internal)).macros)
+    values = _locate_config(bundle, sb, "cfe_sb_internal_cfg_values.h", prefixes, mission_level=False)
+    if values is not None:
+        _read_with_includes(bundle, values, table)
+    try:
+        return Hex(table.evaluate([macro]), 4)
+    except cpp.CppError as exc:
+        bundle.warn(f"{cpu}: {macro}: {exc}")
+        return None
 
 
 def _app_mids(
