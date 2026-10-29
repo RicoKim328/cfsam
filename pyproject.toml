@@ -11,13 +11,20 @@ readme = "CLAUDE.md"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Rico Kim" }]
 requires-python = ">=3.10"
-dependencies = ["ruamel.yaml"]
+# mission.yaml is written by cfsam.yamlout (stdlib only); a YAML library is
+# added when cfsam starts reading mission.yaml back.
+dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest"]
 
-# The cfsam package (src/cfsam) and its console script are added with the MVP.
+[project.scripts]
+cfsam = "cfsam.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 addopts = "-ra"

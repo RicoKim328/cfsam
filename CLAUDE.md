@@ -4,7 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository status
 
-This repository (`cfsam`, Apache-2.0) contains no source code yet. The planned MVP is a Python CLI that imports a cFS mission's apps, topic IDs, MIDs and startup script into `mission.yaml` and validates them (read-only); config generation is a later stage. Update this file once code, build commands, and architecture exist.
+This repository (`cfsam`, Apache-2.0) is a Python CLI that imports a cFS mission's apps, topic IDs, MIDs and startup script into `mission.yaml` (schema `cfsam.mission/v0`, see `tests/golden/cfs_sample/mission.yaml`). Validation is the next stage; config generation comes later.
+
+Usage: `PYTHONPATH=src python3 -m cfsam import <bundle-root> [-o mission.yaml]` (stdlib only; no install needed). It reads the bundle, never writes it; the guard hook blocks running it on `../` directly, so try it on a copy under `$TMPDIR`.
+
+Architecture (`src/cfsam/`):
+- `cmake.py`: evaluates the CMake subset in `mission_defaults.cmake` / `targets.cmake` (`set`, `list`, `if`); raises on anything it can't evaluate.
+- `cpp.py`: `#define` collection and macro expansion (`##`, function-like), integer evaluation, call tracing.
+- `importer.py`: bundle → model dict, mirroring cFS rules for app lists, module search, config header selection, MID mapping, startup generation; each rule cites `bundle/path:line`.
+- `yamlout.py`: deterministic YAML writer; `cli.py`: argparse entry point.
 
 ## Working rules
 
