@@ -16,7 +16,10 @@ the Apache-2.0 license apply; see `NOTICE`.
 | `cfe/modules/core_api/config/default_cfe_core_api_msgid_mapping.h` | topic ID → MID formula (`base \| topic`) |
 | `cfe/modules/sb/fsw/inc/cfe_sb_internal_cfg.h` | `CFE_PLATFORM_SB_HIGHEST_VALID_MSGID` via `CFE_PLATFORM_SB_CFGVAL` (default 0x1FFF) |
 | `cfe/modules/sb/config/default_cfe_sb_internal_cfg_values.h` | `CFE_PLATFORM_SB_CFGVAL(x)` → `DEFAULT_CFE_PLATFORM_SB_##x` (no override in `sample_defs`) |
-| `cfe/cmake/mission_defaults.cmake` | defaults evaluated before `targets.cmake` (`cfe_assert cfe_testcase` in the global app list, module search path) |
+| `cfe/cmake/mission_defaults.cmake` | defaults evaluated before `targets.cmake` (`cfe_assert cfe_testcase` in the global app list, module search path, `MISSION_CORE_MODULES`) |
+| `cfe/modules/<m>/fsw/src/cfe_<m>_objtab.c` (config, es, evs, fs, sb, tbl, time, msg, sbr, resourceid) | core app names: entries with a `TaskMain` (ES, EVS, SB, TBL, TIME) |
+| `osal/CMakeLists.txt`, `psp/CMakeLists.txt` | make the `osal` and `psp` core modules locatable (no objtab) |
+| `apps/sample_app/fsw/src/sample_app.c` | definition of the startup entry `SAMPLE_APP_Main` (line 45) |
 
 Only `sample_app` has source files here; the other listed apps are absent on
 purpose, so the importer reports them as not found.

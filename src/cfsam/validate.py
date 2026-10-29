@@ -198,6 +198,64 @@ def startup_duplicate_name(model: dict) -> Iterator[Finding]:
                 )
 
 
+def startup_core_name(model: dict) -> Iterator[Finding]:
+    """error: a startup entry uses the name of a core app."""
+    # ES creates the core apps (core_apps, from the *_objtab.c entries) before
+    # it reads the script (cfe/modules/es/fsw/src/cfe_es_start.c:189,202), and
+    # apps and libs are both checked against the AppTable
+    # (cfe/modules/es/fsw/src/cfe_es_apps.c:445-450,623-631). Skipped when
+    # core_apps is unknown.
+    core = set(model.get("core_apps") or ())
+    for cpu in model["cpus"]:
+        for entry in cpu["startup"]:
+            if _token(entry["name"]) in core:
+                yield Finding(
+                    "error",
+                    "startup-core-name",
+                    cpu["name"],
+                    f"{_entry_label(entry)} uses the name of core app {_token(entry['name'])}",
+                )
+
+
+def startup_entry_null(model: dict) -> Iterator[Finding]:
+    """error: a CFE_APP startup entry has no entry symbol (NULL or empty)."""
+    # ES skips the lookup for "NULL" or "" (cfe/modules/es/fsw/src/cfe_es_apps.c:187-188);
+    # an app is then registered but its task never runs: CFE_ES_GetTaskFunction
+    # waits for an entry point until the startup timeout and returns (:237-293).
+    # Libraries may have no init function (:678-690).
+    for cpu in model["cpus"]:
+        for entry in cpu["startup"]:
+            if _token(entry["type"]) == "CFE_APP" and _token(entry["entry"]) in ("", "NULL"):
+                yield Finding(
+                    "error",
+                    "startup-entry-null",
+                    cpu["name"],
+                    f"{_entry_label(entry)} has no entry point, so the app never runs",
+                )
+
+
+def startup_entry_not_found(model: dict) -> Iterator[Finding]:
+    """warning: no definition of a startup entry symbol was found in its module's sources."""
+    # ES looks the symbol up only in the module it loaded (OS_ModuleSymbolLookup,
+    # cfe/modules/es/fsw/src/cfe_es_apps.c:190) and drops the app or lib if it is
+    # missing (:191-216). The importer's search is textual (entry_source), hence a
+    # warning. Only entries whose module source was found are checked.
+    paths = {app["name"]: app["path"] for app in model["apps"]}
+    for cpu in model["cpus"]:
+        for entry in cpu["startup"]:
+            if "entry_source" not in entry or entry["entry_source"] is not None:
+                continue
+            file, symbol = _token(entry["file"]), _token(entry["entry"])
+            path = None if "/" in file else paths.get(file.split(".", 1)[0])
+            if path is not None and symbol not in ("", "NULL"):
+                yield Finding(
+                    "warning",
+                    "startup-entry-not-found",
+                    cpu["name"],
+                    f"{_entry_label(entry)}: no definition of {symbol} found under {path}/fsw/src or {path}/src",
+                )
+
+
 def startup_bad_type(model: dict) -> Iterator[Finding]:
     """error: a startup entry's type is not CFE_APP or CFE_LIB."""
     # Exact strcmp, anything else is "Unexpected EntryType" and skipped
@@ -220,6 +278,9 @@ RULES: list[Callable[[dict], Iterator[Finding]]] = [
     mid_cross_cpu,
     startup_unknown_module,
     startup_duplicate_name,
+    startup_core_name,
+    startup_entry_null,
+    startup_entry_not_found,
     startup_bad_type,
 ]
 

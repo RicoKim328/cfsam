@@ -85,6 +85,7 @@ def import_mission(root: Path, mission_config: str = "sample", simulation: str =
 
     core_api = _locate_module(bundle, ev, search_path, "core_api")
     sb = _locate_module(bundle, ev, search_path, "sb")
+    core_apps = _core_apps(bundle, ev, search_path)
     startup = _StartupScript(bundle)
     out_cpus = []
     for cpu in cpus:
@@ -105,7 +106,7 @@ def import_mission(root: Path, mission_config: str = "sample", simulation: str =
                 "mid_base": mid_base,
                 "sb_highest_valid_msgid": _sb_highest_valid_msgid(bundle, sb, prefixes, cpu["name"]),
                 "mids": mids,
-                "startup": startup.entries(cpu["apps"]),
+                "startup": [_with_entry_source(bundle, e, app_dirs) for e in startup.entries(cpu["apps"])],
             }
         )
 
@@ -117,6 +118,7 @@ def import_mission(root: Path, mission_config: str = "sample", simulation: str =
             "name": ev.vars.get("MISSION_NAME"),
             "spacecraft_id": _int_or_text(spacecraft) if spacecraft is not None else None,
         },
+        "core_apps": core_apps,
         "apps": apps,
         "cpus": out_cpus,
     }
@@ -404,6 +406,71 @@ class _StartupScript:
             entry[key] = _int_or_text(entry[key])
         entry["load_addr"] = _int_or_text(entry["load_addr"])
         return entry
+
+
+# -- core apps and entry symbols ----------------------------------------------
+
+
+def _core_apps(bundle: Bundle, ev: cmake.Evaluator, search_path: list[str]) -> list[str] | None:
+    """Names of the core apps ES registers before the startup script runs.
+
+    cfe/cmake/target/CMakeLists.txt:55-71 puts the *_objtab.c entry of each of
+    ``core_api ${MISSION_CORE_MODULES}`` in CFE_CORE_MODULE_OBJTAB; ES gives an
+    AppTable record to the entries with a TaskMain
+    (cfe/modules/es/fsw/src/cfe_es_start.c:802-873). Objtab files are looked up
+    in <module>/fsw/src, where every cFE core module keeps it.
+    """
+    names = []
+    for module in ["core_api", *ev.get_list("MISSION_CORE_MODULES")]:
+        module_dir = _locate_module(bundle, ev, search_path, module)
+        if module_dir is None:
+            bundle.warn(f"core module {module} not found in module search path; core_apps left null")
+            return None
+        for path in sorted((module_dir / "fsw" / "src").glob("*_objtab.c")):
+            text = path.read_text(encoding="utf-8", errors="replace")
+            name = re.search(r'\.Name\s*=\s*"([^"]*)"', text)
+            task = re.search(r"\.TaskMain\s*=\s*(\w+)", text)
+            if name is None:
+                bundle.warn(f"{bundle.rel(path)}: no .Name found; core_apps left null")
+                return None
+            if task is not None and task.group(1) != "NULL":
+                names.append(name.group(1))
+            break
+    return names
+
+
+def _with_entry_source(bundle: Bundle, entry: dict, app_dirs: dict[str, Path | None]) -> dict:
+    # ES looks the entry up only in the module it just loaded
+    # (OS_ModuleSymbolLookup, cfe/modules/es/fsw/src/cfe_es_apps.c:187-190), so
+    # search that module's own sources. "NULL" or empty means no lookup (:187-188).
+    # The file name maps to the module as in startup_unknown_module (validate.py).
+    file = "".join(str(entry["file"]).split())
+    symbol = "".join(str(entry["entry"]).split())
+    module_dir = None if "/" in file else app_dirs.get(file.split(".", 1)[0])
+    found = None
+    if module_dir is not None and symbol not in ("", "NULL"):
+        found = _find_definition(module_dir, symbol, bundle.root)
+    return {**entry, "entry_source": found}
+
+
+def _find_definition(module_dir: Path, symbol: str, root: Path) -> str | None:
+    """``path:line`` of a non-static C function definition of ``symbol``.
+
+    Only fsw/src and src are searched: unit-test stubs define the same names.
+    A text search, not a compiler: a definition built by a macro is not found.
+    """
+    pattern = re.compile(
+        rf"^(?!static\b)(?:[A-Za-z_][\w \t*]*[\s*])?{re.escape(symbol)}\s*\([^;{{}}]*\)\s*\{{",
+        re.MULTILINE,
+    )
+    for sub in ("fsw/src", "src"):
+        for path in sorted((module_dir / sub).glob("*.c")):
+            text = path.read_text(encoding="utf-8", errors="replace")
+            match = pattern.search(text)
+            if match:
+                line = text.count("\n", 0, match.start() + match.group(0).index(symbol)) + 1
+                return f"{path.relative_to(root).as_posix()}:{line}"
+    return None
 
 
 def _int_or_text(text: str):
