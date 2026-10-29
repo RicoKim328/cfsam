@@ -140,7 +140,88 @@ def mid_cross_cpu(model: dict) -> Iterator[Finding]:
             yield Finding("warning", "mid-cross-cpu", ", ".join(cpus), f"MID {_hex(value)} is used by {users}")
 
 
-RULES: list[Callable[[dict], Iterator[Finding]]] = [mid_duplicate, mid_invalid, mid_class_bit, mid_cross_cpu]
+# Startup rules. ES logs a bad line and goes on with the next one, so the
+# mission boots without that module: cfe/modules/es/fsw/src/cfe_es_startupscript.c:296-302
+# ignores CFE_ES_ParseFileEntry's status.
+
+
+def _token(value) -> str:
+    """A startup field as ES reads it: only isgraph() chars are kept (cfe_es_startupscript.c:223)."""
+    return "".join(str(value).split())
+
+
+def _entry_label(entry: dict) -> str:
+    return f"startup entry {_token(entry['name'])} ({_token(entry['file'])})"
+
+
+def startup_unknown_module(model: dict) -> Iterator[Finding]:
+    """error: a startup entry loads a module that is not built for its CPU."""
+    # Only the CPU's <cpu>_APPLIST (with MISSION_GLOBAL_APPLIST) is installed to
+    # exe/<cpu>/cf (cfe/cmake/global_functions.cmake:376-378, arch_build.cmake:540,790-792);
+    # a missing file fails OS_ModuleLoad (cfe/modules/es/fsw/src/cfe_es_apps.c:167-176).
+    # A file name with no '/' gets the /cf prefix and, without a '.', the module
+    # extension (cfe/modules/fs/fsw/src/cfe_fs_api.c:470-540), so the module is the
+    # part before the first '.'. Names with a '/' point elsewhere and are skipped.
+    for cpu in model["cpus"]:
+        apps = set(cpu["apps"])
+        for entry in cpu["startup"]:
+            file = _token(entry["file"])
+            if "/" not in file and file.split(".", 1)[0] not in apps:
+                yield Finding(
+                    "error",
+                    "startup-unknown-module",
+                    cpu["name"],
+                    f"{_entry_label(entry)} loads {file}, which is not in the CPU's apps",
+                )
+
+
+def startup_duplicate_name(model: dict) -> Iterator[Finding]:
+    """error: two startup entries on one CPU have the same name."""
+    # Apps and libraries share one name space: CFE_ES_AppCreate rejects an existing
+    # app name, CFE_ES_LoadLibrary an existing lib or app name, with
+    # CFE_ES_ERR_DUPLICATE_NAME (cfe/modules/es/fsw/src/cfe_es_apps.c:445-450,623-631);
+    # an app named like a loaded lib fails OS_ModuleLoad with OS_ERR_NAME_TAKEN
+    # (osal/src/os/shared/src/osapi-module.c:214). Names match case-sensitively
+    # (cfe/modules/es/fsw/src/cfe_es_resource.c:97,132).
+    for cpu in model["cpus"]:
+        by_name: dict[str, list[dict]] = defaultdict(list)
+        for entry in cpu["startup"]:
+            by_name[_token(entry["name"])].append(entry)
+        for name, entries in by_name.items():
+            if len(entries) > 1:
+                files = ", ".join(f"{_token(e['type'])} {_token(e['file'])}" for e in entries)
+                yield Finding(
+                    "error",
+                    "startup-duplicate-name",
+                    cpu["name"],
+                    f"name {name} is used by {len(entries)} entries: {files}",
+                )
+
+
+def startup_bad_type(model: dict) -> Iterator[Finding]:
+    """error: a startup entry's type is not CFE_APP or CFE_LIB."""
+    # Exact strcmp, anything else is "Unexpected EntryType" and skipped
+    # (cfe/modules/es/fsw/src/cfe_es_startupscript.c:362,406,415-419).
+    for cpu in model["cpus"]:
+        for entry in cpu["startup"]:
+            if _token(entry["type"]) not in ("CFE_APP", "CFE_LIB"):
+                yield Finding(
+                    "error",
+                    "startup-bad-type",
+                    cpu["name"],
+                    f"{_entry_label(entry)} has type {_token(entry['type'])}, expected CFE_APP or CFE_LIB",
+                )
+
+
+RULES: list[Callable[[dict], Iterator[Finding]]] = [
+    mid_duplicate,
+    mid_invalid,
+    mid_class_bit,
+    mid_cross_cpu,
+    startup_unknown_module,
+    startup_duplicate_name,
+    startup_bad_type,
+]
 
 
 def validate(model: dict) -> list[Finding]:
