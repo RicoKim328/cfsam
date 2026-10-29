@@ -142,6 +142,74 @@ def test_mid_cross_cpu_skips_global_and_unknown_scope(model):
     assert validate(model) == []
 
 
+def entry(type_, file, name):
+    return {
+        "type": type_,
+        "file": file,
+        "entry": f"{name}_Main",
+        "name": name,
+        "priority": 50,
+        "stack": 16384,
+        "load_addr": 0,
+        "exception_action": 0,
+    }
+
+
+def test_startup_unknown_module(model):
+    model["cpus"][0]["startup"].append(entry("CFE_APP", "no_such_app", "NOPE"))
+    findings = validate(model)
+    assert [(f.severity, f.rule, f.where) for f in findings] == [("error", "startup-unknown-module", "cpu1")]
+    assert "NOPE" in findings[0].message and "no_such_app" in findings[0].message
+
+
+def test_startup_unknown_module_is_per_cpu(model):
+    model["cpus"][1]["apps"].remove("hk")
+    findings = validate(model)
+    assert [(f.rule, f.where) for f in findings] == [("startup-unknown-module", "cpu2")]
+    assert "hk" in findings[0].message
+
+
+def test_startup_module_with_extension_or_path(model):
+    # "hk.so" still resolves to /cf/hk.so; a '/' disables the /cf prefix, so it is skipped.
+    model["cpus"][0]["startup"].append(entry("CFE_APP", "hk.so", "HK2"))
+    model["cpus"][0]["startup"].append(entry("CFE_APP", "/ram/other/x", "HK3"))
+    assert validate(model) == []
+
+
+def test_startup_duplicate_name(model):
+    model["cpus"][0]["startup"].append(entry("CFE_APP", "hk", "HK"))
+    findings = validate(model)
+    assert [(f.severity, f.rule, f.where) for f in findings] == [("error", "startup-duplicate-name", "cpu1")]
+    assert "HK" in findings[0].message and "2 entries" in findings[0].message
+
+
+def test_startup_duplicate_name_across_app_and_lib(model):
+    model["cpus"][0]["startup"].append(entry("CFE_LIB", "sample_lib", "SCH_LAB"))
+    findings = validate(model)
+    assert [(f.rule, f.where) for f in findings] == [("startup-duplicate-name", "cpu1")]
+    assert "SCH_LAB" in findings[0].message
+
+
+def test_startup_names_are_case_sensitive(model):
+    model["cpus"][0]["startup"].append(entry("CFE_APP", "hk", "hk"))
+    assert validate(model) == []
+
+
+def test_startup_whitespace_is_ignored(model):
+    # ES keeps only isgraph() chars, so "CFE _APP" reads as CFE_APP and "H K" as HK.
+    model["cpus"][0]["startup"].append(entry("CFE _APP", " h k", "H K"))
+    findings = validate(model)
+    assert [f.rule for f in findings] == ["startup-duplicate-name"]
+
+
+@pytest.mark.parametrize("type_", ["cfe_app", "CFE_TBL"])
+def test_startup_bad_type(model, type_):
+    model["cpus"][0]["startup"].append(entry(type_, "hk", "HK2"))
+    findings = validate(model)
+    assert [(f.severity, f.rule, f.where) for f in findings] == [("error", "startup-bad-type", "cpu1")]
+    assert "HK2" in findings[0].message and type_ in findings[0].message
+
+
 def test_cli_validate_ok(capsys):
     assert main(["validate", str(GOLDEN)]) == 0
     assert capsys.readouterr().out == ""
