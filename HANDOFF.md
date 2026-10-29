@@ -1,16 +1,17 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# Handoff (startup rules B-1 to B-3, 2026-10-29)
+# Handoff (after startup rules merge, 2026-10-29)
 
 Rewrite this file when a task finishes. Items under "Awaiting approval" are
 not approvals; ask Rico.
 
 ## State
 
-- `main` @ `41f5f74` (PR #7 merged: `mid-invalid`, `mid-class-bit`,
-  `mid-cross-cpu`).
-- Branch `worktree-startup-rules` (from `41f5f74`), worktree
-  `.claude/worktrees/startup-rules`: startup rules B-1 to B-3 below plus this
-  file, **uncommitted** (commit/push/PR not yet approved).
+- `main` @ `5438bab` (PR #9 merged: `startup-unknown-module`,
+  `startup-duplicate-name`, `startup-bad-type`). No task in progress.
+- Leftovers for Rico to clean up outside Claude Code: remote branch
+  `worktree-startup-rules`, worktree `.claude/worktrees/startup-rules`
+  (now on branch `handoff-post-startup-rules`), and a stale
+  `.git/config.lock` that blocks git config writes (branch upstream setup).
 - `src/cfsam/`: `cmake.py`, `cpp.py`, `importer.py`, `yamlout.py`,
   `validate.py`, `cli.py` (`cfsam import`, `cfsam validate <mission.yaml>`
   → `severity: [rule] where: message`, exit 0 / 1 on errors / 2 on load
@@ -96,11 +97,11 @@ not approvals; ask Rico.
 
 ## Next
 
-1. Rico reviews `worktree-startup-rules`; on approval: commit, push, PR.
-2. Not yet chosen. Candidates: core-app name clash for startup names; startup
-   `entry` symbol checks; config generation.
+1. Not yet chosen; Rico picks. Candidates: core-app name clash for startup
+   names (CFE_ES, CFE_EVS, ...); startup `entry` symbol checks; config
+   generation.
 
 ## Awaiting approval
 
-- Commit, push and PR of `worktree-startup-rules`.
+- The next task's selection.
 - `.venv` creation and package installs; builds.
