@@ -11,9 +11,9 @@ readme = "CLAUDE.md"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Rico Kim" }]
 requires-python = ">=3.10"
-# mission.yaml is written by cfsam.yamlout (stdlib only); a YAML library is
-# added when cfsam starts reading mission.yaml back.
-dependencies = []
+# mission.yaml is written by cfsam.yamlout (stdlib only) and read back by
+# cfsam validate with PyYAML.
+dependencies = ["PyYAML>=6"]
 
 [project.optional-dependencies]
 dev = ["pytest"]
