@@ -91,6 +91,27 @@ def test_cpu_specific_msgids_override(sample_copy):
     ]
 
 
+def test_sb_highest_valid_msgid(sample):
+    model, _ = import_mission(sample)
+    assert [c["sb_highest_valid_msgid"] for c in model["cpus"]] == [0x1FFF, 0x1FFF]
+
+
+def test_sb_highest_valid_msgid_cpu_override(sample_copy):
+    # cfe/modules/sb/arch_build.cmake: cfe_sb_internal_cfg_values.h is a per-CPU config file.
+    (sample_copy / "sample_defs/cpu2/cfe_sb_internal_cfg_values.h").write_text(
+        "#define CFE_PLATFORM_SB_CFGVAL(x) CPU2_SB_##x\n#define CPU2_SB_HIGHEST_VALID_MSGID 0xFFFF\n"
+    )
+    model, _ = import_mission(sample_copy)
+    assert [c["sb_highest_valid_msgid"] for c in model["cpus"]] == [0x1FFF, 0xFFFF]
+
+
+def test_sb_highest_valid_msgid_missing_is_warning(sample_copy):
+    (sample_copy / "cfe/modules/sb/fsw/inc/cfe_sb_internal_cfg.h").unlink()
+    model, warnings = import_mission(sample_copy)
+    assert [c["sb_highest_valid_msgid"] for c in model["cpus"]] == [None, None]
+    assert any("cpu1: CFE_PLATFORM_SB_HIGHEST_VALID_MSGID" in w for w in warnings)
+
+
 def test_mission_topicid_values_override(sample_copy):
     (sample_copy / "sample_defs/sample_app_topicid_values.h").write_text(
         "#define SAMPLE_APP_MISSION_TIDVAL(x) (0x40 + DEFAULT_SAMPLE_APP_MISSION_##x##_TOPICID)\n"

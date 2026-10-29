@@ -76,7 +76,71 @@ def mid_duplicate(model: dict) -> Iterator[Finding]:
                 yield Finding("error", "mid-duplicate", cpu["name"], f"MID {_hex(value)} is used by {names}")
 
 
-RULES: list[Callable[[dict], Iterator[Finding]]] = [mid_duplicate]
+def _label(mid: dict) -> str:
+    return f"{mid['name']} ({mid['app']})"
+
+
+def mid_invalid(model: dict) -> Iterator[Finding]:
+    """error: a MID is 0 or above the CPU's CFE_PLATFORM_SB_HIGHEST_VALID_MSGID."""
+    # CFE_SB_IsValidMsgId: not CFE_SB_INVALID_MSG_ID (0) and <= HIGHEST_VALID_MSGID
+    # (cfe/modules/sb/fsw/src/cfe_sb_msg_id_util.c:200-203; cfe_sb_api_typedefs.h:110).
+    # SB rejects others at runtime: subscribe cfe_sb_api.c:981-984, transmit
+    # cfe_sb_priv.c:889-891. Without the limit only 0 is checked.
+    for cpu in model["cpus"]:
+        highest = cpu.get("sb_highest_valid_msgid")
+        for mid in cpu["mids"]:
+            if mid["value"] == 0:
+                yield Finding("error", "mid-invalid", cpu["name"], f"{_label(mid)} is 0x0000, the invalid MsgId")
+            elif highest is not None and mid["value"] > highest:
+                yield Finding(
+                    "error",
+                    "mid-invalid",
+                    cpu["name"],
+                    f"{_label(mid)} is {_hex(mid['value'])}, above CFE_PLATFORM_SB_HIGHEST_VALID_MSGID {_hex(highest)}",
+                )
+
+
+_CMD_BIT = 0x1000
+
+
+def mid_class_bit(model: dict) -> Iterator[Finding]:
+    """error: a cmd MID has the CCSDS packet-type bit clear, or a tlm MID has it set."""
+    # MsgId v1 is the CCSDS StreamId (cfe/modules/msg/fsw/src/cfe_msg_msgid_v1.c:43,57-66);
+    # bit 0x1000 is the packet type, 1 = CMD (cfe/modules/msg/fsw/inc/ccsds_hdr.h:53-58),
+    # and cFS reads the type from it (cfe/modules/msg/fsw/src/cfe_msg_msgid_shared.c:32-51).
+    for cpu in model["cpus"]:
+        for mid in cpu["mids"]:
+            if mid["class"] not in ("cmd", "tlm"):
+                continue
+            if (mid["class"] == "cmd") != bool(mid["value"] & _CMD_BIT):
+                state = "clear" if mid["class"] == "cmd" else "set"
+                yield Finding(
+                    "error",
+                    "mid-class-bit",
+                    cpu["name"],
+                    f"{_label(mid)} is class {mid['class']} but {_hex(mid['value'])} has the CMD bit 0x1000 {state}",
+                )
+
+
+def mid_cross_cpu(model: dict) -> Iterator[Finding]:
+    """warning: platform MIDs of different CPUs have the same value."""
+    # MID = base | topic (cfe/modules/core_api/config/default_cfe_core_api_msgid_mapping.h:49-86)
+    # with per-CPU platform bases, so a wide topic can reach another CPU's base
+    # (cpu1 0x1800 | 0x100 == cpu2 0x1900). This matters once CPUs share a bus (SBN).
+    # Global MIDs are the same on every CPU by design and are skipped, as are
+    # MIDs with an unknown scope.
+    by_value: dict[int, dict[str, list[dict]]] = defaultdict(dict)
+    for cpu in model["cpus"]:
+        for mid in cpu["mids"]:
+            if mid["scope"] == "platform":
+                by_value[mid["value"]].setdefault(cpu["name"], []).append(mid)
+    for value, cpus in by_value.items():
+        if len(cpus) > 1:
+            users = ", ".join(f"{_label(m)} on {name}" for name, mids in cpus.items() for m in mids)
+            yield Finding("warning", "mid-cross-cpu", ", ".join(cpus), f"MID {_hex(value)} is used by {users}")
+
+
+RULES: list[Callable[[dict], Iterator[Finding]]] = [mid_duplicate, mid_invalid, mid_class_bit, mid_cross_cpu]
 
 
 def validate(model: dict) -> list[Finding]:

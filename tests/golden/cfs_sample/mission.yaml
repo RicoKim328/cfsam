@@ -90,6 +90,7 @@ cpus:
       - sbn_udp
       - sbn_f_remap
     mid_base: {platform_cmd: 0x1800, platform_tlm: 0x0800, global_cmd: 0x1860, global_tlm: 0x0860}
+    sb_highest_valid_msgid: 0x1FFF
     mids:
       - name: SAMPLE_APP_CMD_MID
         app: sample_app
@@ -263,6 +264,7 @@ cpus:
       - sbn_udp
       - sbn_f_remap
     mid_base: {platform_cmd: 0x1900, platform_tlm: 0x0900, global_cmd: 0x1860, global_tlm: 0x0860}
+    sb_highest_valid_msgid: 0x1FFF
     mids:
       - name: SAMPLE_APP_CMD_MID
         app: sample_app

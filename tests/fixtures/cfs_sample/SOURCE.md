@@ -14,6 +14,8 @@ the Apache-2.0 license apply; see `NOTICE`.
 | `apps/sample_app/config/default_sample_app_*.h` | topic ID → MID mapping macros and MID names |
 | `sample_defs/cpu1/cfe_core_api_base_msgid_values.h`, `sample_defs/cpu2/…` | per-CPU selection of the MID bases (`CFE_PLATFORM_BASE_MIDVAL`) |
 | `cfe/modules/core_api/config/default_cfe_core_api_msgid_mapping.h` | topic ID → MID formula (`base \| topic`) |
+| `cfe/modules/sb/fsw/inc/cfe_sb_internal_cfg.h` | `CFE_PLATFORM_SB_HIGHEST_VALID_MSGID` via `CFE_PLATFORM_SB_CFGVAL` (default 0x1FFF) |
+| `cfe/modules/sb/config/default_cfe_sb_internal_cfg_values.h` | `CFE_PLATFORM_SB_CFGVAL(x)` → `DEFAULT_CFE_PLATFORM_SB_##x` (no override in `sample_defs`) |
 | `cfe/cmake/mission_defaults.cmake` | defaults evaluated before `targets.cmake` (`cfe_assert cfe_testcase` in the global app list, module search path) |
 
 Only `sample_app` has source files here; the other listed apps are absent on
