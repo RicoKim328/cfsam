@@ -12,6 +12,12 @@ the Apache-2.0 license apply; see `NOTICE`.
 | `sample_defs/inc/global_core_api_base_msgid_values.h` | per-CPU and global CMD/TLM MID bases |
 | `apps/sample_app/fsw/inc/sample_app_topicids.h` | topic IDs (`CMD` 0x82, `SEND_HK` 0x83, `HK_TLM` 0x83) |
 | `apps/sample_app/config/default_sample_app_*.h` | topic ID → MID mapping macros and MID names |
+| `sample_defs/cpu1/cfe_core_api_base_msgid_values.h`, `sample_defs/cpu2/…` | per-CPU selection of the MID bases (`CFE_PLATFORM_BASE_MIDVAL`) |
+| `cfe/modules/core_api/config/default_cfe_core_api_msgid_mapping.h` | topic ID → MID formula (`base \| topic`) |
+| `cfe/cmake/mission_defaults.cmake` | defaults evaluated before `targets.cmake` (`cfe_assert cfe_testcase` in the global app list, module search path) |
+
+Only `sample_app` has source files here; the other listed apps are absent on
+purpose, so the importer reports them as not found.
 
 Note: `SEND_HK` (command) and `HK_TLM` (telemetry) share topic ID 0x83; that is
 valid because CMD and TLM MIDs use different bases. Validation rules must not

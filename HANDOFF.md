@@ -1,76 +1,74 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# Handoff (harness, 2026-10-28)
+# Handoff (MVP importer, 2026-10-29)
 
 Rewrite this file when a task finishes. Items under "Awaiting approval" are
 not approvals; ask Rico.
 
 ## State
 
-- Branch `harness` (worktree `.claude/worktrees/harness`), based on `main` @
-  `d92e023` (PR #1 merge: CLAUDE.md, working rules, Apache-2.0). Harness
-  committed and pushed to `origin/harness`; PR #2 (`harness` → `main`,
-  https://github.com/RicoKim328/cfsam/pull/2) is open, not merged.
-- Harness: `.claude/settings.json` (Bash sandbox + guard hook),
-  `.claude/hooks/guard_cfs_readonly.py`, `.claude/skills/{cfs-reference,add-validation-rule}`,
-  `.claude/agents/cfs-fact-checker.md`, `pyproject.toml`, `tests/conftest.py`,
-  `tests/test_harness.py`, `tests/fixtures/cfs_sample/`, `.gitignore` additions.
-- `python3 -m pytest -q` → 103 passed (system Python 3.10, user-installed pytest;
-  no venv, ruamel.yaml not installed).
-- Bash sandbox is configured (`enabled`, `failIfUnavailable`,
-  `allowUnsandboxedCommands: false`; bubblewrap + socat installed) and
-  **verified** 2026-10-28 after a restart: writes to `~/Desktop` and to the
-  cfsam main checkout fail with "Read-only file system"; writes in the
-  worktree and `$TMPDIR` (`/tmp/claude-1000`) succeed. The bundle was not probed.
-- The sandbox only covers Bash; Edit/Write are not sandboxed (the guard hook
-  covers them).
-- Sandbox placeholders: bubblewrap creates `/dev/null` char devices in the
-  worktree for protected config paths (`.bashrc`, `.gitconfig`, `.mcp.json`,
-  `.idea`, `.vscode`, `.claude/commands`, ...). They show as untracked; never
-  commit them and do not gitignore them (Rico). Stage files by name, never
-  `git add -A`.
-- Guard hook (secondary layer) is allowlist-based after seven Codex
-  stop-review rounds: a Bash segment touching the bundle must be read-only or
-  a plain copy out of it; env/`~`/brace/glob expansion (not for names the
-  command assigns), subshell-scoped cd, quoted $(...)/backtick bodies and
-  for-loop variables are handled; non-read commands with targets it can't
-  resolve are blocked. It also blocks bundle builds. It is a best-effort
-  parser: code inside script files is not seen. `$TMPDIR` unset in the hook's
-  env resolves to the sandbox's `/tmp/claude-<uid>`; a bare `TMPDIR` word in
-  the command (possible reassignment) still leaves it unresolved.
-- CLAUDE.md update applied 2026-10-28 (Rico confirmed in-session): Handoff
-  line, Development workflow section, build line "run by Rico from the bundle
-  root (`! make …`)", `@HANDOFF.md` at the end. The original draft text was
-  lost; the applied text was rebuilt from the decisions below.
-- Codex stop-time review gate is on for the `harness` and `init-claude-md` worktrees.
+- `main` @ `3632918` (PR #2 merged: harness). MVP importer work is on branch
+  `worktree-mvp` (worktree `.claude/worktrees/mvp`), committed locally; not
+  pushed, no PR.
+- `src/cfsam/`: `cmake.py` (CMake subset evaluator), `cpp.py` (macro
+  expansion), `importer.py` (bundle → model), `yamlout.py` (stdlib YAML
+  writer), `cli.py` (`cfsam import <bundle> [-o FILE] [--simulation]
+  [--mission-config]`).
+- mission.yaml schema `cfsam.mission/v0`: `variant`, `mission` (name,
+  spacecraft_id), `apps` (name, path, topics[name, topic_id]), `cpus` (name,
+  processor_id, toolchain, platform, apps, mid_base, mids[name, app, topic,
+  class, scope, value], startup[8 fields]). Golden:
+  `tests/golden/cfs_sample/mission.yaml`.
+- Fixture `cfs_sample` gained 4 unmodified bundle copies (per-CPU MID base
+  headers, MID mapping header, `cfe/cmake/mission_defaults.cmake`); listed in
+  `SOURCE.md`.
+- `python3 -m pytest -q` → 151 passed (103 harness + 48 new).
+- Trial import of a copy of the real bundle (apps/, libs/, sample_defs/,
+  cfe/cmake, cfe/modules/{core_api,cfe_assert,cfe_testcase} under `$TMPDIR`):
+  19 apps found, 67 MIDs per CPU, 16 startup entries; topic IDs for 12 apps.
+  The 6 SBN MIDs have `class/topic: null` because sample_defs/<cpu>/sbn_msgids.h
+  adds the CPU base directly instead of using the mapping macros.
+- cFS facts in `importer.py` were checked with `cfs-fact-checker` (9 claims:
+  8 confirmed, 1 partial → limitations below).
 
 ## Decisions
 
-- 2026-10-28: Handoff via tracked `HANDOFF.md`, auto-loaded by `@HANDOFF.md`
-  in CLAUDE.md; rewritten, not appended.
-- 2026-10-28: Approvals relayed by `rico/cursor` count as Rico's own.
-- 2026-10-28: Agents do not build the cFS bundle; Rico runs bundle builds
-  himself with `! make ...` (the guard hook blocks them).
-- 2026-10-28: Bundle write protection is Claude Code's Bash sandbox (OS
-  level); the guard hook stays as a secondary layer. The bundle is not in
-  `denyWrite` (that would make cfsam read-only too); the sandbox's default
-  write scope is relied on.
-- 2026-10-28: CLAUDE.md hook line says "Bundle builds are run by Rico
-  (`! make …`)" and line 21 says build commands "are run by Rico from the
-  bundle root (`! make …`)"; applied after Rico's in-session check.
-- Fixtures are unmodified bundle copies at bundle-relative paths; tests never
-  read the real bundle.
-- No golden snapshots yet: mission.yaml schema is undecided.
-- 2026-10-28: Guard hook treats `/tmp/claude-<uid>` as the safe `$TMPDIR`;
-  sandbox placeholders are not gitignored; commits stage files by name.
+- 2026-10-28: Approvals relayed by `rico/cursor` count as Rico's own. Rico
+  (via cursor): "이제 MVP 구현하자" → MVP implementation approved; venv,
+  installs, network, commit, push, PR not included.
+- 2026-10-29: Rico (via cursor) accepted schema v0 and dropping `ruamel.yaml`
+  (mission.yaml written by stdlib `cfsam.yamlout`; add a YAML library when
+  mission.yaml is read back). Commit to `worktree-mvp` approved; push and PR
+  not approved.
+- Importer evaluates cFS build logic (CMake subset, header override search,
+  macro expansion) instead of hardcoding values; anything it cannot evaluate
+  raises or becomes a warning, never a guess.
+- The guard hook blocks running cfsam on `../`; trial imports use a copy in
+  `$TMPDIR`.
+- Earlier: handoff via tracked `HANDOFF.md`; agents don't build the bundle;
+  Bash sandbox is the primary bundle write protection; fixtures are unmodified
+  bundle copies; commits stage files by name; sandbox placeholder dotfiles are
+  not committed or gitignored.
+
+## Limitations (v0)
+
+- EDS variant not supported (`CFE_EDS_ENABLED` always unset).
+- `$CFS_APP_PATH` and `<cpu>_STATIC_APPLIST` / `MISSION_GLOBAL_STATIC_APPLIST`
+  ignored.
+- `#if/#ifdef` in headers are not evaluated (all `#define`s collected).
+- Startup generation parses the `generate_startup.cmake` shape used by the
+  sample mission (fixed `file(WRITE)` lines + one `file(APPEND)` template).
+- Topic IDs only from `<app>/fsw/inc/<app>_topicids.h`; SBN's
+  `sample_defs/inc/global_sbn_topicids.h` style is not listed as app topics.
 
 ## Next
 
-1. Rico reviews and merges PR #2.
-2. Create `.venv`, install `ruamel.yaml` + pytest.
-3. MVP: mission.yaml schema, importer for `cfs_sample`, first golden snapshot.
+1. Rico approves push of `worktree-mvp` and a PR to `main`.
+2. Validate stage: read mission.yaml back (pick YAML library, needs install
+   approval / `.venv`), first rules via `add-validation-rule` (e.g. duplicate
+   MID per CPU; same-class topic ID collision).
 
 ## Awaiting approval
 
-- Merging PR #2.
-- `.venv` creation and package installs; builds; MVP implementation.
+- Push `worktree-mvp` and open a PR.
+- `.venv` creation and package installs; builds.
 - Removing the `init-claude-md` worktree or remote branch `worktree-init-claude-md`.
