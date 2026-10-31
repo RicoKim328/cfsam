@@ -1,21 +1,23 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# Handoff (core-name and entry-symbol rules, startup generation, 2026-10-29)
+# Handoff (after core-name, entry-symbol and generate merge, 2026-10-31)
 
 Rewrite this file when a task finishes. Items under "Awaiting approval" are
 not approvals; ask Rico.
 
 ## State
 
-- `main` @ `caff787` (PR #10 merged, HANDOFF refresh after PR #9).
-- Branch `worktree-startup-checks` (from `caff787`), worktree
-  `.claude/worktrees/startup-checks`: the work below, **uncommitted**
-  (commit/push/PR not yet approved).
+- `main` @ `d19e5b6` (PR #11 merged: `startup-core-name`,
+  `startup-entry-null`, `startup-entry-not-found`, `cfsam generate`). No task
+  in progress.
+- Leftovers for Rico to clean up outside Claude Code: remote branch
+  `worktree-startup-checks`, worktree `.claude/worktrees/startup-checks`
+  (now on branch `handoff-post-startup-checks`) and its local branches.
 - `src/cfsam/`: `cmake.py`, `cpp.py`, `importer.py`, `yamlout.py`,
   `validate.py`, `generate.py`, `cli.py`:
   - `cfsam import <bundle> [-o mission.yaml]`
   - `cfsam validate <mission.yaml>` → `severity: [rule] where: message`,
     exit 0 / 1 on errors / 2 on load error.
-  - `cfsam generate <mission.yaml> -o <dir>` (new) → `<dir>/<cpu>/cfe_es_startup.scr`.
+  - `cfsam generate <mission.yaml> -o <dir>` → `<dir>/<cpu>/cfe_es_startup.scr`.
     Runs validate first, prints findings, and writes nothing (exit 1) if any
     is an error. Lines are `a, b, ...;` in `generate_startup.cmake` field
     order; ES drops whitespace, so they equal the cmake-written lines field
@@ -114,12 +116,13 @@ not approvals; ask Rico.
 
 ## Next
 
-1. Rico reviews `worktree-startup-checks`; on approval: commit, push, PR.
-2. Not yet chosen. Candidates: compare `generate` output with a real
-   `make native_std.install` result (Rico runs the build); generate more
-   config (targets.cmake, MID headers).
+1. Selected by Rico (2026-10-31): compare `generate` output with a real
+   build. Rico runs `make native_std.prep` and `make native_std.install` from
+   the bundle root; then diff `build-native_std/exe/<cpu>/cf/cfe_es_startup.scr`
+   against `cfsam generate` output for a `$TMPDIR` bundle copy, field by
+   field (ES ignores whitespace).
+2. Later candidate: generate more config (targets.cmake, MID headers).
 
 ## Awaiting approval
 
-- Commit, push and PR of `worktree-startup-checks`.
-- `.venv` creation and package installs; builds.
+- `.venv` creation and package installs; builds (Rico runs them).
