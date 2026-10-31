@@ -1,18 +1,18 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# Handoff (topic ID header generation, 2026-10-31)
+# Handoff (after topic ID header merge, 2026-10-31)
 
 Rewrite this file when a task finishes. Items under "Awaiting approval" are
 not approvals; ask Rico.
 
 ## State
 
-- `main` @ `d19e5b6` (PR #11 merged). PR #12 (`handoff-post-startup-checks`,
-  HANDOFF only) is open.
-- Branch `worktree-topicid-gen` (from PR #12's `96b58a0`, so it stacks on
-  it), worktree `.claude/worktrees/startup-checks`: topic ID header
-  generation below, **uncommitted** (commit/push/PR not yet approved).
-- Leftovers for Rico to clean up outside Claude Code: remote branch
-  `worktree-startup-checks` and the merged local branches.
+- `main` @ `365768d` (PR #13 merged: `<app>_topicid_values.h` generation; it
+  carried PR #12's HANDOFF commits, so #12 shows as merged too). No task in
+  progress.
+- Leftovers for Rico to clean up outside Claude Code: remote branches
+  `worktree-startup-checks`, `handoff-post-startup-checks`,
+  `worktree-topicid-gen`; worktree `.claude/worktrees/startup-checks` (now on
+  branch `handoff-post-topicid-gen`) and its merged local branches.
 - `src/cfsam/`: `cmake.py`, `cpp.py`, `importer.py`, `yamlout.py`,
   `validate.py`, `generate.py`, `cli.py`:
   - `cfsam import <bundle> [-o mission.yaml]`
@@ -149,13 +149,13 @@ not approvals; ask Rico.
 
 ## Next
 
-1. Rico reviews `worktree-topicid-gen`; on approval: commit, push, PR.
-2. Build check of the topic headers (Rico): copy the generated
-   `*_topicid_values.h` into `sample_defs/` of the bundle (or a copy), run
-   `make native_std.prep && make native_std.install`, and confirm it builds;
-   then remove them again.
-3. Later candidates: a test fixture of the built startup script; core-module
-   topic headers.
+1. Not yet chosen; Rico picks. Candidates:
+   - Build check of the topic headers (Rico): copy the generated
+     `*_topicid_values.h` into `sample_defs/` of the bundle (or a copy), run
+     `make native_std.prep && make native_std.install`, confirm it builds,
+     then remove them again.
+   - A test fixture of the built startup script.
+   - Core-module topic headers.
 
 ## Build comparison (2026-10-31)
 
