@@ -3,6 +3,7 @@
 schema: cfsam.mission/v0
 variant: {simulation: native, eds: false}
 mission: {name: SampleMission, spacecraft_id: 0x42}
+core_apps: [CFE_ES, CFE_EVS, CFE_SB, CFE_TBL, CFE_TIME]
 apps:
   - name: ci_lab
     path: null
@@ -119,6 +120,7 @@ cpus:
         stack: 0
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_LIB
         file: sample_lib
         entry: SAMPLE_LIB_Init
@@ -127,6 +129,7 @@ cpus:
         stack: 0
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: sch_lab
         entry: SCH_LAB_AppMain
@@ -135,6 +138,7 @@ cpus:
         stack: 32768
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: ci_lab
         entry: CI_LAB_AppMain
@@ -143,6 +147,7 @@ cpus:
         stack: 32768
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: to_lab
         entry: TO_LAB_AppMain
@@ -151,6 +156,7 @@ cpus:
         stack: 32768
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: sample_app
         entry: SAMPLE_APP_Main
@@ -159,6 +165,7 @@ cpus:
         stack: 32768
         load_addr: 0x0
         exception_action: 0
+        entry_source: "apps/sample_app/fsw/src/sample_app.c:45"
       - type: CFE_APP
         file: lc
         entry: LC_AppMain
@@ -167,6 +174,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: cf
         entry: CF_AppMain
@@ -175,6 +183,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: ds
         entry: DS_AppMain
@@ -183,6 +192,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: fm
         entry: FM_AppMain
@@ -191,6 +201,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: hk
         entry: HK_AppMain
@@ -199,6 +210,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: hs
         entry: HS_AppMain
@@ -207,6 +219,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: sc
         entry: SC_AppMain
@@ -215,6 +228,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: md
         entry: MD_AppMain
@@ -223,6 +237,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: cs
         entry: CS_AppMain
@@ -231,6 +246,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: sbn
         entry: SBN_AppMain
@@ -239,6 +255,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
   - name: cpu2
     processor_id: 2
     toolchain: native
@@ -293,6 +310,7 @@ cpus:
         stack: 0
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_LIB
         file: sample_lib
         entry: SAMPLE_LIB_Init
@@ -301,6 +319,7 @@ cpus:
         stack: 0
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: sch_lab
         entry: SCH_LAB_AppMain
@@ -309,6 +328,7 @@ cpus:
         stack: 32768
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: ci_lab
         entry: CI_LAB_AppMain
@@ -317,6 +337,7 @@ cpus:
         stack: 32768
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: to_lab
         entry: TO_LAB_AppMain
@@ -325,6 +346,7 @@ cpus:
         stack: 32768
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: sample_app
         entry: SAMPLE_APP_Main
@@ -333,6 +355,7 @@ cpus:
         stack: 32768
         load_addr: 0x0
         exception_action: 0
+        entry_source: "apps/sample_app/fsw/src/sample_app.c:45"
       - type: CFE_APP
         file: lc
         entry: LC_AppMain
@@ -341,6 +364,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: cf
         entry: CF_AppMain
@@ -349,6 +373,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: ds
         entry: DS_AppMain
@@ -357,6 +382,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: fm
         entry: FM_AppMain
@@ -365,6 +391,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: hk
         entry: HK_AppMain
@@ -373,6 +400,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: hs
         entry: HS_AppMain
@@ -381,6 +409,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: sc
         entry: SC_AppMain
@@ -389,6 +418,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: md
         entry: MD_AppMain
@@ -397,6 +427,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: cs
         entry: CS_AppMain
@@ -405,6 +436,7 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null
       - type: CFE_APP
         file: sbn
         entry: SBN_AppMain
@@ -413,3 +445,4 @@ cpus:
         stack: 131072
         load_addr: 0x0
         exception_action: 0
+        entry_source: null

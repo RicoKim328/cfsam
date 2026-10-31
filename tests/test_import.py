@@ -63,7 +63,43 @@ def test_startup_entries(sample):
     assert startup[6] == {
         "type": "CFE_APP", "file": "lc", "entry": "LC_AppMain", "name": "LC",
         "priority": 70, "stack": 131072, "load_addr": 0, "exception_action": 0,
+        "entry_source": None,
     }
+
+
+def test_core_apps(sample):
+    model, _ = import_mission(sample)
+    # MISSION_CORE_MODULES with a TaskMain in their *_objtab.c, in list order.
+    assert model["core_apps"] == ["CFE_ES", "CFE_EVS", "CFE_SB", "CFE_TBL", "CFE_TIME"]
+
+
+def test_core_apps_missing_module_is_warning(sample_copy):
+    shutil.rmtree(sample_copy / "osal")
+    model, warnings = import_mission(sample_copy)
+    assert model["core_apps"] is None
+    assert any("core module osal" in w for w in warnings)
+
+
+def test_startup_entry_source(sample):
+    model, _ = import_mission(sample)
+    by_name = {e["name"]: e for e in model["cpus"][0]["startup"]}
+    assert by_name["SAMPLE_APP"]["entry_source"] == "apps/sample_app/fsw/src/sample_app.c:45"
+    # lc has no source in the fixture, so nothing was searched.
+    assert by_name["LC"]["entry_source"] is None
+
+
+def test_find_definition_skips_static_prototypes_and_stubs(tmp_path):
+    from cfsam.importer import _find_definition
+
+    src = tmp_path / "x" / "fsw" / "src"
+    src.mkdir(parents=True)
+    (src / "a.c").write_text("void X_Main(void);\nstatic void X_Init(void)\n{\n}\n", encoding="utf-8")
+    (src / "b.c").write_text("/* c */\nint32\nX_Main(void)\n{\n    return 0;\n}\n", encoding="utf-8")
+    stubs = tmp_path / "x" / "unit-test" / "stubs"
+    stubs.mkdir(parents=True)
+    (stubs / "x_stubs.c").write_text("void X_Init(void) {}\n", encoding="utf-8")
+    assert _find_definition(tmp_path / "x", "X_Main", tmp_path) == "x/fsw/src/b.c:3"
+    assert _find_definition(tmp_path / "x", "X_Init", tmp_path) is None
 
 
 def test_missing_app_sources_are_warnings(sample):

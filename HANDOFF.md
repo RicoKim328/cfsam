@@ -1,50 +1,63 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# Handoff (after startup rules merge, 2026-10-29)
+# Handoff (core-name and entry-symbol rules, startup generation, 2026-10-29)
 
 Rewrite this file when a task finishes. Items under "Awaiting approval" are
 not approvals; ask Rico.
 
 ## State
 
-- `main` @ `5438bab` (PR #9 merged: `startup-unknown-module`,
-  `startup-duplicate-name`, `startup-bad-type`). No task in progress.
-- Leftovers for Rico to clean up outside Claude Code: remote branch
-  `worktree-startup-rules`, worktree `.claude/worktrees/startup-rules`
-  (now on branch `handoff-post-startup-rules`), and a stale
-  `.git/config.lock` that blocks git config writes (branch upstream setup).
+- `main` @ `caff787` (PR #10 merged, HANDOFF refresh after PR #9).
+- Branch `worktree-startup-checks` (from `caff787`), worktree
+  `.claude/worktrees/startup-checks`: the work below, **uncommitted**
+  (commit/push/PR not yet approved).
 - `src/cfsam/`: `cmake.py`, `cpp.py`, `importer.py`, `yamlout.py`,
-  `validate.py`, `cli.py` (`cfsam import`, `cfsam validate <mission.yaml>`
-  → `severity: [rule] where: message`, exit 0 / 1 on errors / 2 on load
-  error).
-- Schema stays `cfsam.mission/v0`, including
-  `cpus[].sb_highest_valid_msgid`. The importer evaluates it from
-  `cfe/modules/sb/fsw/inc/cfe_sb_internal_cfg.h:155-156` and the per-CPU
-  `cfe_sb_internal_cfg_values.h`. If it cannot, it warns and writes null.
+  `validate.py`, `generate.py`, `cli.py`:
+  - `cfsam import <bundle> [-o mission.yaml]`
+  - `cfsam validate <mission.yaml>` → `severity: [rule] where: message`,
+    exit 0 / 1 on errors / 2 on load error.
+  - `cfsam generate <mission.yaml> -o <dir>` (new) → `<dir>/<cpu>/cfe_es_startup.scr`.
+    Runs validate first, prints findings, and writes nothing (exit 1) if any
+    is an error. Lines are `a, b, ...;` in `generate_startup.cmake` field
+    order; ES drops whitespace, so they equal the cmake-written lines field
+    for field. Golden: `tests/golden/cfs_sample/generate/<cpu>/`.
+- Schema stays `cfsam.mission/v0`. New fields (2026-10-29):
+  - top-level `core_apps`: names from `core_api ${MISSION_CORE_MODULES}`
+    whose `<module>/fsw/src/*_objtab.c` has a non-NULL `.TaskMain`
+    (`cfe/cmake/target/CMakeLists.txt:55-71`, `cfe_es_start.c:802-873`).
+    Sample: CFE_ES, CFE_EVS, CFE_SB, CFE_TBL, CFE_TIME. Null with a warning
+    if a core module is not found.
+  - `cpus[].startup[].entry_source`: `path:line` of a non-static definition
+    of the entry symbol in the module's `fsw/src` or `src` (stubs excluded),
+    or null if not found / module source not found / `NULL` or empty symbol.
 - Rules (`validate.RULES`, all citations in `validate.py`):
-  - `mid-duplicate` (error): two different messages on one CPU share a MID.
-    Aliases with the same (app, topic, class, scope) pass.
-  - `mid-invalid` (error): MID is 0 or above `sb_highest_valid_msgid`.
-  - `mid-class-bit` (error): the cmd/tlm class disagrees with bit 0x1000.
-  - `mid-cross-cpu` (warning): the same platform MID value on two or more CPUs.
-  - `startup-unknown-module` (error): the startup `file` module (the part
-    before the first `.`) is not in the CPU's `apps`. Files containing `/` are
-    skipped, because ES then drops the `/cf` prefix (`cfe_fs_api.c:470-540`).
-  - `startup-duplicate-name` (error): two startup entries on one CPU have the
-    same `name`. Apps and libs share the namespace; matching is
-    case-sensitive.
-  - `startup-bad-type` (error): `type` is not exactly `CFE_APP`/`CFE_LIB`.
-  - Startup fields are compared as ES reads them, with all whitespace removed
-    (`isgraph`, `cfe_es_startupscript.c:223`).
-- `python3 -m pytest -q` → 181 passed.
-- Trial on a `$TMPDIR/trial/bundle` copy (apps, cfe, libs, osal, psp,
-  sample_defs, tools): import with no warnings, validate with no findings,
-  exit 0.
+  - `mid-duplicate`, `mid-invalid`, `mid-class-bit` (error); `mid-cross-cpu`
+    (warning).
+  - `startup-unknown-module`, `startup-duplicate-name`, `startup-bad-type`
+    (error).
+  - `startup-core-name` (error, new): a startup name equals a `core_apps`
+    name (ES creates core apps first; apps and libs are checked against the
+    AppTable, `cfe_es_apps.c:445-450,623-631`). Skipped if `core_apps` null.
+  - `startup-entry-null` (error, new): `CFE_APP` with entry `NULL` or empty.
+    ES registers the app but its task never runs (`cfe_es_apps.c:187-188,
+    237-293`). Allowed for `CFE_LIB` (`:678-690`).
+  - `startup-entry-not-found` (warning, new): module source known but no
+    definition found. Warning because the search is textual; ES looks only in
+    the loaded module (`OS_ModuleSymbolLookup`, `cfe_es_apps.c:190`).
+  - Startup fields are compared with all whitespace removed (`isgraph`).
+- Fixture `tests/fixtures/cfs_sample` gained unmodified copies of the ten
+  core `*_objtab.c`, `osal/CMakeLists.txt`, `psp/CMakeLists.txt` and
+  `apps/sample_app/fsw/src/sample_app.c` (listed in `SOURCE.md`).
+- `python3 -m pytest -q` → 197 passed.
+- Trial on `$TMPDIR/trial/bundle` (apps, cfe, libs, osal, psp, sample_defs,
+  tools): import with no warnings; all 16 entry symbols found on both CPUs;
+  validate with no findings; generate exit 0, cpu1 script equals the golden.
 - Sandbox: Bash cannot create directories under `.claude/worktrees/`; use
   EnterWorktree (branch `worktree-<name>`). The guard hook blocks `tar`,
   `find -prune` and `awk` on paths near the bundle, and heredoc commit
   messages. Use `cp -r`, plain `find`/`ls`/`grep`, and `git commit -F <file>`.
-  The worktree guard refuses commands that pass `$VAR` paths to python/sed;
-  spell paths out.
+  The worktree guard refuses commands that pass `$VAR` paths to
+  python/sed/find; spell paths out or put the commands in a script file.
+  `.git/config` writes may be blocked: push without `-u`.
 
 ## Decisions
 
@@ -56,15 +69,15 @@ not approvals; ask Rico.
 - 2026-10-29: No topic-ID rule. MID = base | topic
   (`cfe/modules/core_api/config/default_cfe_core_api_msgid_mapping.h:49-86`),
   so rules check computed MID values.
-- 2026-10-29: Severities: `mid-*` errors except `mid-cross-cpu` (warning, only
-  matters when CPUs share a bus). Startup rules are errors: ES logs a bad line,
-  skips it and keeps booting without that module
-  (`cfe/modules/es/fsw/src/cfe_es_startupscript.c:296-302`).
-- 2026-10-29: B-1 to B-3 implemented on Rico's "다음 작업 실행". Fact-check
-  corrections applied: a duplicate lib returns `CFE_ES_ERR_DUPLICATE_NAME`, not
-  `CFE_ES_LIB_ALREADY_LOADED` (unused in this bundle). `.` and `/` in a file
-  name each turn off only the default extension and only the `/cf` prefix,
-  respectively.
+- 2026-10-29: Severities: `mid-*` errors except `mid-cross-cpu` (warning).
+  Startup rules are errors (ES logs a bad line, skips it and keeps booting,
+  `cfe_es_startupscript.c:296-302`), except `startup-entry-not-found`
+  (warning, text search).
+- 2026-10-29: Core app names are derived from objtab files, not hardcoded
+  (the set follows `MISSION_CORE_MODULES`, e.g. the optional `ta` module adds
+  CFE_TA).
+- 2026-10-29: Config generation scope chosen by Rico: per-CPU startup
+  script only. Generate refuses on validate errors.
 - Importer evaluates cFS build logic instead of hardcoding values; anything
   it cannot evaluate raises or becomes a warning, never a guess.
 - The guard hook blocks running cfsam on `../`; trial imports use a copy in
@@ -92,16 +105,21 @@ not approvals; ask Rico.
   skip them.
 - `startup-unknown-module` trusts `cpus[].apps`: it does not check that a
   module actually calls `add_cfe_app`, and it skips files with a `/`.
-- `startup-duplicate-name` does not check against the core app names
-  (CFE_ES, CFE_EVS, ...), which share the ES AppTable.
+- `core_apps` looks for objtab files in `<module>/fsw/src`, not the module's
+  CMake target sources.
+- `entry_source` is a regex search: definitions produced by macros, or with
+  parentheses inside the parameter list, are not found.
+- `generate` writes only `cfe_es_startup.scr`; not checked against a real
+  build output (the bundle's `build-native_std` is empty).
 
 ## Next
 
-1. Not yet chosen; Rico picks. Candidates: core-app name clash for startup
-   names (CFE_ES, CFE_EVS, ...); startup `entry` symbol checks; config
-   generation.
+1. Rico reviews `worktree-startup-checks`; on approval: commit, push, PR.
+2. Not yet chosen. Candidates: compare `generate` output with a real
+   `make native_std.install` result (Rico runs the build); generate more
+   config (targets.cmake, MID headers).
 
 ## Awaiting approval
 
-- The next task's selection.
+- Commit, push and PR of `worktree-startup-checks`.
 - `.venv` creation and package installs; builds.

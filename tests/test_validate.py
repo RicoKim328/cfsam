@@ -202,6 +202,44 @@ def test_startup_whitespace_is_ignored(model):
     assert [f.rule for f in findings] == ["startup-duplicate-name"]
 
 
+def test_startup_core_name(model):
+    model["cpus"][0]["startup"].append(entry("CFE_LIB", "sample_lib", "CFE_SB"))
+    findings = validate(model)
+    assert [(f.severity, f.rule, f.where) for f in findings] == [("error", "startup-core-name", "cpu1")]
+    assert "CFE_SB" in findings[0].message and "core app" in findings[0].message
+
+
+def test_startup_core_name_skipped_without_core_apps(model):
+    model["core_apps"] = None
+    model["cpus"][0]["startup"].append(entry("CFE_APP", "hk", "CFE_ES"))
+    assert validate(model) == []
+
+
+@pytest.mark.parametrize("symbol", ["NULL", "", " "])
+def test_startup_entry_null(model, symbol):
+    e = entry("CFE_APP", "hk", "HK2")
+    e["entry"] = symbol
+    model["cpus"][0]["startup"].append(e)
+    findings = validate(model)
+    assert [(f.severity, f.rule, f.where) for f in findings] == [("error", "startup-entry-null", "cpu1")]
+    assert "HK2" in findings[0].message
+
+
+def test_startup_entry_null_allowed_for_lib(model):
+    e = entry("CFE_LIB", "sample_lib", "LIB2")
+    e["entry"] = "NULL"
+    model["cpus"][0]["startup"].append(e)
+    assert validate(model) == []
+
+
+def test_startup_entry_not_found(model):
+    sample = next(e for e in model["cpus"][0]["startup"] if e["name"] == "SAMPLE_APP")
+    sample["entry_source"] = None
+    findings = validate(model)
+    assert [(f.severity, f.rule, f.where) for f in findings] == [("warning", "startup-entry-not-found", "cpu1")]
+    assert "SAMPLE_APP_Main" in findings[0].message and "apps/sample_app" in findings[0].message
+
+
 @pytest.mark.parametrize("type_", ["cfe_app", "CFE_TBL"])
 def test_startup_bad_type(model, type_):
     model["cpus"][0]["startup"].append(entry(type_, "hk", "HK2"))
