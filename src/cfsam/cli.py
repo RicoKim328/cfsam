@@ -43,6 +43,7 @@ def run_generate(path: Path, out_dir: Path) -> int:
         return status
     try:
         generate.write_startup_scripts(model, out_dir)
+        generate.write_topicid_headers(model, out_dir)
     except OSError as exc:
         print(f"cfsam: error: {exc}", file=sys.stderr)
         return 2
@@ -59,7 +60,10 @@ def main(argv: list[str] | None = None) -> int:
     imp.add_argument("--simulation", default="native", help="SIMULATION value (default: native)")
     val = sub.add_parser("validate", help="check mission.yaml and report findings (exit 1 on errors)")
     val.add_argument("mission", type=Path, help="mission.yaml written by cfsam import")
-    gen = sub.add_parser("generate", help="write <dir>/<cpu>/cfe_es_startup.scr from a valid mission.yaml")
+    gen = sub.add_parser(
+        "generate",
+        help="write <dir>/<cpu>/cfe_es_startup.scr and <dir>/<app>_topicid_values.h from a valid mission.yaml",
+    )
     gen.add_argument("mission", type=Path, help="mission.yaml written by cfsam import")
     gen.add_argument("-o", "--output", type=Path, required=True, help="output directory (not the cFS tree)")
     args = parser.parse_args(argv)

@@ -7,63 +7,82 @@ core_apps: [CFE_ES, CFE_EVS, CFE_SB, CFE_TBL, CFE_TIME]
 apps:
   - name: ci_lab
     path: null
+    tidval: null
     topics: []
   - name: to_lab
     path: null
+    tidval: null
     topics: []
   - name: sch_lab
     path: null
+    tidval: null
     topics: []
   - name: cfe_assert
     path: null
+    tidval: null
     topics: []
   - name: cfe_testcase
     path: null
+    tidval: null
     topics: []
   - name: sample_app
     path: apps/sample_app
+    tidval: SAMPLE_APP_MISSION_TIDVAL
     topics:
       - {name: CMD, topic_id: 0x82}
       - {name: SEND_HK, topic_id: 0x83}
       - {name: HK_TLM, topic_id: 0x83}
   - name: sample_lib
     path: null
+    tidval: null
     topics: []
   - name: cf
     path: null
+    tidval: null
     topics: []
   - name: hs
     path: null
+    tidval: null
     topics: []
   - name: md
     path: null
+    tidval: null
     topics: []
   - name: cs
     path: null
+    tidval: null
     topics: []
   - name: fm
     path: null
+    tidval: null
     topics: []
   - name: lc
     path: null
+    tidval: null
     topics: []
   - name: sc
     path: null
+    tidval: null
     topics: []
   - name: ds
     path: null
+    tidval: null
     topics: []
   - name: hk
     path: null
+    tidval: null
     topics: []
   - name: sbn
     path: null
+    tidval: null
     topics: []
   - name: sbn_udp
     path: null
+    tidval: null
     topics: []
   - name: sbn_f_remap
     path: null
+    tidval: null
     topics: []
 cpus:
   - name: cpu1

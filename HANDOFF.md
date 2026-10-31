@@ -1,26 +1,45 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# Handoff (core-name and entry-symbol rules, startup generation, 2026-10-29)
+# Handoff (topic ID header generation, 2026-10-31)
 
 Rewrite this file when a task finishes. Items under "Awaiting approval" are
 not approvals; ask Rico.
 
 ## State
 
-- `main` @ `caff787` (PR #10 merged, HANDOFF refresh after PR #9).
-- Branch `worktree-startup-checks` (from `caff787`), worktree
-  `.claude/worktrees/startup-checks`: the work below, **uncommitted**
-  (commit/push/PR not yet approved).
+- `main` @ `d19e5b6` (PR #11 merged). PR #12 (`handoff-post-startup-checks`,
+  HANDOFF only) is open.
+- Branch `worktree-topicid-gen` (from PR #12's `96b58a0`, so it stacks on
+  it), worktree `.claude/worktrees/startup-checks`: topic ID header
+  generation below, **uncommitted** (commit/push/PR not yet approved).
+- Leftovers for Rico to clean up outside Claude Code: remote branch
+  `worktree-startup-checks` and the merged local branches.
 - `src/cfsam/`: `cmake.py`, `cpp.py`, `importer.py`, `yamlout.py`,
   `validate.py`, `generate.py`, `cli.py`:
   - `cfsam import <bundle> [-o mission.yaml]`
   - `cfsam validate <mission.yaml>` → `severity: [rule] where: message`,
     exit 0 / 1 on errors / 2 on load error.
-  - `cfsam generate <mission.yaml> -o <dir>` (new) → `<dir>/<cpu>/cfe_es_startup.scr`.
+  - `cfsam generate <mission.yaml> -o <dir>` → `<dir>/<cpu>/cfe_es_startup.scr`.
     Runs validate first, prints findings, and writes nothing (exit 1) if any
     is an error. Lines are `a, b, ...;` in `generate_startup.cmake` field
     order; ES drops whitespace, so they equal the cmake-written lines field
     for field. Golden: `tests/golden/cfs_sample/generate/<cpu>/`.
-- Schema stays `cfsam.mission/v0`. New fields (2026-10-29):
+    Also writes `<dir>/<app>_topicid_values.h` (new, 2026-10-31) for each app
+    with a `tidval`: it defines `<tidval>(x)` as `CFSAM_<APP>_##x##_TOPICID`
+    plus one literal per topic. Copied to `<MISSION_DEFS>/`, it replaces the
+    app's `config/default_<app>_topicid_values.h` for all CPUs
+    (`cfe/cmake/global_functions.cmake:54-111,210-214`, each app's
+    `mission_build.cmake`); MIDs follow as base | topic. `<defs>/config/`
+    would win over `<defs>/` (last match kept). The output dir mirrors
+    `<MISSION_DEFS>`: mission files on top, per-CPU files in `<cpu>/`.
+- Schema stays `cfsam.mission/v0`. New fields:
+  - `apps[].tidval` (2026-10-31): the function-like macro every topic macro
+    of the app is defined through (`<prefix>_<X>_TOPICID` = `<TIDVAL>(X)`),
+    read from `fsw/inc/<app>_topicids.h`. Null with a warning when the topics
+    don't all use one macro with their own name as argument; null without a
+    warning when the app has no topic header. Real bundle: all 12 apps with a
+    topic header have one (`SAMPLE_APP_MISSION_TIDVAL`, `CFE_MISSION_HK_TIDVAL`,
+    ...); sch_lab, sbn*, libs, cfe_assert, cfe_testcase are null.
+  - (2026-10-29):
   - top-level `core_apps`: names from `core_api ${MISSION_CORE_MODULES}`
     whose `<module>/fsw/src/*_objtab.c` has a non-NULL `.TaskMain`
     (`cfe/cmake/target/CMakeLists.txt:55-71`, `cfe_es_start.c:802-873`).
@@ -47,10 +66,16 @@ not approvals; ask Rico.
 - Fixture `tests/fixtures/cfs_sample` gained unmodified copies of the ten
   core `*_objtab.c`, `osal/CMakeLists.txt`, `psp/CMakeLists.txt` and
   `apps/sample_app/fsw/src/sample_app.c` (listed in `SOURCE.md`).
-- `python3 -m pytest -q` → 197 passed.
+- `python3 -m pytest -q` → 203 passed. Topic header tests: golden header,
+  round trip (fixture copy + generated headers in `sample_defs/` re-imports to
+  the golden mission.yaml), and an edited topic ID moving its MID.
 - Trial on `$TMPDIR/trial/bundle` (apps, cfe, libs, osal, psp, sample_defs,
   tools): import with no warnings; all 16 entry symbols found on both CPUs;
   validate with no findings; generate exit 0, cpu1 script equals the golden.
+  Topic headers (2026-10-31): 12 generated; a second copy with them in
+  `sample_defs/` re-imports byte-identical; bumping hk `CMD` 0x9A→0xAA moves
+  `HK_CMD_MID` to 0x18AA (cpu1) / 0x19AA (cpu2) with topic/class/scope kept,
+  nothing else changes. Not yet compiled by a real build.
 - Sandbox: Bash cannot create directories under `.claude/worktrees/`; use
   EnterWorktree (branch `worktree-<name>`). The guard hook blocks `tar`,
   `find -prune` and `awk` on paths near the bundle, and heredoc commit
@@ -78,6 +103,11 @@ not approvals; ask Rico.
   CFE_TA).
 - 2026-10-29: Config generation scope chosen by Rico: per-CPU startup
   script only. Generate refuses on validate errors.
+- 2026-10-31: Next config chosen by Rico: topic ID headers
+  (`<app>_topicid_values.h`), not literal per-CPU MID headers (would lose
+  topic/class/scope on re-import) or targets.cmake (variant-specific and
+  lossy: EDS/SIMULATION conditionals, `<cpu>_SYSTEM`, global vs per-CPU app
+  lists). The TIDVAL macro name is read from each app, not assumed.
 - Importer evaluates cFS build logic instead of hardcoding values; anything
   it cannot evaluate raises or becomes a warning, never a guess.
 - The guard hook blocks running cfsam on `../`; trial imports use a copy in
@@ -109,17 +139,35 @@ not approvals; ask Rico.
   CMake target sources.
 - `entry_source` is a regex search: definitions produced by macros, or with
   parentheses inside the parameter list, are not found.
-- `generate` writes only `cfe_es_startup.scr`; not checked against a real
-  build output (the bundle's `build-native_std` is empty).
+- `generate` startup scripts matched a real build once by hand (sample
+  mission, native_std); no test guards it. Topic headers are checked only
+  through cfsam's own C macro evaluator, not a compiler.
+- Topic headers cover apps only; cFE core modules (es, evs, sb, tbl, time,
+  ta, cfe_testcase's `cfe_test_topicid_values.h`) use the same pattern but
+  with `cfe_` name matching, and their topics aren't imported. SBN topic IDs
+  are plain literals in `sample_defs/inc/global_sbn_topicids.h`, not covered.
 
 ## Next
 
-1. Rico reviews `worktree-startup-checks`; on approval: commit, push, PR.
-2. Not yet chosen. Candidates: compare `generate` output with a real
-   `make native_std.install` result (Rico runs the build); generate more
-   config (targets.cmake, MID headers).
+1. Rico reviews `worktree-topicid-gen`; on approval: commit, push, PR.
+2. Build check of the topic headers (Rico): copy the generated
+   `*_topicid_values.h` into `sample_defs/` of the bundle (or a copy), run
+   `make native_std.prep && make native_std.install`, and confirm it builds;
+   then remove them again.
+3. Later candidates: a test fixture of the built startup script; core-module
+   topic headers.
+
+## Build comparison (2026-10-31)
+
+- Rico ran `make native_std.prep && make native_std.install` outside Claude
+  Code (a `!` command runs in this session's sandbox, which cannot write the
+  bundle). `cfsam generate` output for a `$TMPDIR` bundle copy matches
+  `build-native_std/exe/{cpu1,cpu2}/cf/cfe_es_startup.scr` field for field:
+  16 entries per CPU, same order and values; only cmake's column padding
+  differs, which ES drops (`cfe_es_startupscript.c:223`).
+- How: `cp` the built scripts into `$TMPDIR` (the guard hook blocks python on
+  bundle paths), split each at `;`, drop whitespace, compare the fields.
 
 ## Awaiting approval
 
-- Commit, push and PR of `worktree-startup-checks`.
-- `.venv` creation and package installs; builds.
+- `.venv` creation and package installs; builds (Rico runs them).

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository status
 
-This repository (`cfsam`, Apache-2.0) is a Python CLI that imports a cFS mission's apps, topic IDs, MIDs and startup script into `mission.yaml` (schema `cfsam.mission/v0`, see `tests/golden/cfs_sample/mission.yaml`). `cfsam validate` checks it and `cfsam generate` writes config files from it (so far: per-CPU `cfe_es_startup.scr`).
+This repository (`cfsam`, Apache-2.0) is a Python CLI that imports a cFS mission's apps, topic IDs, MIDs and startup script into `mission.yaml` (schema `cfsam.mission/v0`, see `tests/golden/cfs_sample/mission.yaml`). `cfsam validate` checks it and `cfsam generate` writes config files from it (so far: per-CPU `cfe_es_startup.scr` and mission-level `<app>_topicid_values.h` overrides).
 
 Usage: `PYTHONPATH=src python3 -m cfsam import <bundle-root> [-o mission.yaml]` (stdlib only; no install needed). It reads the bundle, never writes it; the guard hook blocks running it on `../` directly, so try it on a copy under `$TMPDIR`. Then `cfsam validate <mission.yaml>` and `cfsam generate <mission.yaml> -o <dir>` (refuses when validate reports errors; never write into the bundle).
 
@@ -13,7 +13,7 @@ Architecture (`src/cfsam/`):
 - `cpp.py`: `#define` collection and macro expansion (`##`, function-like), integer evaluation, call tracing.
 - `importer.py`: bundle → model dict, mirroring cFS rules for app lists, module search, config header selection, MID mapping, startup generation; each rule cites `bundle/path:line`.
 - `validate.py`: read-only rules over the model (`RULES`), each citing the cFS behavior it protects.
-- `generate.py`: config files from a model (startup scripts).
+- `generate.py`: config files from a model (startup scripts, topic ID headers), laid out like `<MISSION_DEFS>`.
 - `yamlout.py`: deterministic YAML writer; `cli.py`: argparse entry point.
 
 ## Working rules
