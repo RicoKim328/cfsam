@@ -77,11 +77,11 @@ def import_mission(root: Path, mission_config: str = "sample", simulation: str =
         app_dir = app_dirs[name]
         if app_dir is None:
             bundle.warn(f"app {name}: source directory not found in module search path")
-            apps.append({"name": name, "path": None, "topics": []})
+            apps.append({"name": name, "path": None, "tidval": None, "topics": []})
             continue
-        table, topics = _app_topics(bundle, name, app_dir)
+        table, topics, tidval = _app_topics(bundle, name, app_dir)
         topic_macros[name] = table
-        apps.append({"name": name, "path": bundle.rel(app_dir), "topics": topics})
+        apps.append({"name": name, "path": bundle.rel(app_dir), "tidval": tidval, "topics": topics})
 
     core_api = _locate_module(bundle, ev, search_path, "core_api")
     sb = _locate_module(bundle, ev, search_path, "sb")
@@ -229,11 +229,34 @@ def _topic_re(app: str) -> re.Pattern[str]:
     return re.compile(rf"(?:{up}_MISSION|CFE_MISSION_{up})_(\w+)_TOPICID")
 
 
-def _app_topics(bundle: Bundle, name: str, app_dir: Path) -> tuple[cpp.MacroTable, list[dict]]:
+def _tidval(bundle: Bundle, name: str, header: cpp.Header, topic_macros: list[tuple[str, str]]) -> str | None:
+    """The function-like macro every topic ID is defined through, or None.
+
+    Every app in the bundle defines ``<prefix>_<X>_TOPICID`` as ``<TIDVAL>(X)``
+    and takes ``<TIDVAL>`` from ``<app>_topicid_values.h``, which a mission can
+    replace (apps/sample_app/fsw/inc/sample_app_topicids.h:26-29,
+    apps/sample_app/mission_build.cmake:23-26). Generating that override needs
+    the macro name, so it is recorded only when all topics agree.
+    """
+    callees = set()
+    for macro, topic in topic_macros:
+        body = header.macros[macro].body
+        if len(body) != 4 or body[1:] != ("(", topic, ")"):
+            callees.add(None)
+        else:
+            callees.add(body[0])
+    if len(callees) == 1 and None not in callees:
+        return callees.pop()
+    if topic_macros:
+        bundle.warn(f"app {name}: topic IDs do not all use one TIDVAL macro; tidval left null")
+    return None
+
+
+def _app_topics(bundle: Bundle, name: str, app_dir: Path) -> tuple[cpp.MacroTable, list[dict], str | None]:
     table = cpp.MacroTable()
     topicids = app_dir / "fsw" / "inc" / f"{name}_topicids.h"
     if not topicids.is_file():
-        return table, []
+        return table, [], None
     header = cpp.read_header(topicids, bundle.rel(topicids))
     table.add(header.macros)
     values = _locate_config(bundle, app_dir, f"{name}_topicid_values.h", [], mission_level=True)
@@ -242,17 +265,19 @@ def _app_topics(bundle: Bundle, name: str, app_dir: Path) -> tuple[cpp.MacroTabl
 
     pattern = _topic_re(name)
     topics = []
+    topic_macros = []
     for macro in header.macros:
         m = pattern.fullmatch(macro)
         if not m:
             continue
+        topic_macros.append((macro, m.group(1)))
         try:
             value = table.evaluate([macro])
         except cpp.CppError as exc:
             bundle.warn(f"app {name}: topic {m.group(1)}: {exc}")
             continue
         topics.append({"name": m.group(1), "topic_id": Hex(value, 2)})
-    return table, topics
+    return table, topics, _tidval(bundle, name, header, topic_macros)
 
 
 def _core_macros(bundle: Bundle, core_api: Path | None, prefixes: list[str]) -> cpp.MacroTable:

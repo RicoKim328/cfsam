@@ -67,6 +67,27 @@ def test_startup_entries(sample):
     }
 
 
+def test_app_tidval(sample):
+    model, _ = import_mission(sample)
+    apps = {a["name"]: a for a in model["apps"]}
+    assert apps["sample_app"]["tidval"] == "SAMPLE_APP_MISSION_TIDVAL"
+    assert apps["ci_lab"]["tidval"] is None  # no source in the fixture
+
+
+def test_app_tidval_not_uniform_is_warning(sample_copy):
+    path = sample_copy / "apps/sample_app/fsw/inc/sample_app_topicids.h"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "SAMPLE_APP_MISSION_TIDVAL(HK_TLM)", "OTHER_TIDVAL(HK_TLM)"
+        ),
+        encoding="utf-8",
+    )
+    model, warnings = import_mission(sample_copy)
+    app = next(a for a in model["apps"] if a["name"] == "sample_app")
+    assert app["tidval"] is None
+    assert any("app sample_app: topic IDs do not all use one TIDVAL macro" in w for w in warnings)
+
+
 def test_core_apps(sample):
     model, _ = import_mission(sample)
     # MISSION_CORE_MODULES with a TaskMain in their *_objtab.c, in list order.
