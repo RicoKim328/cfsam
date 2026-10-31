@@ -111,17 +111,25 @@ not approvals; ask Rico.
   CMake target sources.
 - `entry_source` is a regex search: definitions produced by macros, or with
   parentheses inside the parameter list, are not found.
-- `generate` writes only `cfe_es_startup.scr`; not checked against a real
-  build output (the bundle's `build-native_std` is empty).
+- `generate` writes only `cfe_es_startup.scr`. The match with a real build
+  was checked once by hand (sample mission, native_std); no test guards it.
 
 ## Next
 
-1. Selected by Rico (2026-10-31): compare `generate` output with a real
-   build. Rico runs `make native_std.prep` and `make native_std.install` from
-   the bundle root; then diff `build-native_std/exe/<cpu>/cf/cfe_es_startup.scr`
-   against `cfsam generate` output for a `$TMPDIR` bundle copy, field by
-   field (ES ignores whitespace).
-2. Later candidate: generate more config (targets.cmake, MID headers).
+1. Not yet chosen; Rico picks. Candidates: generate more config
+   (targets.cmake, MID headers); keep a copy of the built startup script as a
+   fixture so a test guards the build comparison below.
+
+## Build comparison (2026-10-31)
+
+- Rico ran `make native_std.prep && make native_std.install` outside Claude
+  Code (a `!` command runs in this session's sandbox, which cannot write the
+  bundle). `cfsam generate` output for a `$TMPDIR` bundle copy matches
+  `build-native_std/exe/{cpu1,cpu2}/cf/cfe_es_startup.scr` field for field:
+  16 entries per CPU, same order and values; only cmake's column padding
+  differs, which ES drops (`cfe_es_startupscript.c:223`).
+- How: `cp` the built scripts into `$TMPDIR` (the guard hook blocks python on
+  bundle paths), split each at `;`, drop whitespace, compare the fields.
 
 ## Awaiting approval
 
