@@ -1,17 +1,18 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# Handoff (after core module topic header merge, 2026-11-03)
+# Handoff (after topic header build check, 2026-11-03)
 
 Rewrite this file when a task finishes. Items under "Awaiting approval" are
 not approvals; ask Rico.
 
 ## State
 
-- `main` @ `c569847` (PR #17 merged: `generate` writes core module topic ID
-  headers). No task in progress.
-- Leftovers for Rico to clean up outside Claude Code: remote branch
-  `worktree-core-topicid-gen`; worktree `.claude/worktrees/core-topicid-gen`
-  (now on branch `handoff-post-core-topicid-gen`) and the merged local
-  branch `worktree-core-topicid-gen`.
+- `main` @ `31b07c4` (PR #18 merged: handoff after PR #17, core module topic
+  ID headers). No task in progress. The topic header build check is done
+  (see "Build comparison (2026-11-03)").
+- Leftover for Rico to clean up outside Claude Code once this handoff PR is
+  merged: worktree `.claude/worktrees/handoff-post-build-check` and branch
+  `worktree-handoff-post-build-check` (local and remote). Earlier leftovers
+  are already cleaned up.
 - `src/cfsam/`: `cmake.py`, `cpp.py`, `importer.py`, `yamlout.py`,
   `validate.py`, `generate.py`, `cli.py`:
   - `cfsam import <bundle> [-o mission.yaml]`
@@ -91,9 +92,11 @@ not approvals; ask Rico.
   Edit tool, `cp -r` with absolute bundle paths, plain `find`/`ls`/`grep`,
   and `git commit -F <file>`. The worktree guard refuses commands that pass
   `$VAR` paths to python/sed/find/cp/mkdir or chain many steps; spell paths
-  out or put the commands in a script file. `git fetch`/`push` work with
-  `github.com` allowed. `.git/config` writes may be blocked: push without
-  `-u`.
+  out or put the commands in a script file. It also misreads regexes with
+  `(`/`)` (e.g. `grep -o 'X([A-Z_]*)'`) on bundle paths as non-read-only;
+  use plain `grep` patterns or copy the file to `$TMPDIR`. `git fetch`/`push`
+  work with `github.com` allowed. `.git/config` writes may be blocked: push
+  without `-u`.
 
 ## Decisions
 
@@ -162,27 +165,53 @@ not approvals; ask Rico.
   CMake target sources.
 - `entry_source` is a regex search: definitions produced by macros, or with
   parentheses inside the parameter list, are not found.
-- `generate` startup scripts matched a real build once by hand (sample
-  mission, native_std); no test guards it. Topic headers (app and core) are
-  checked only through cfsam's own C macro evaluator, not a compiler.
+- `generate` startup scripts (2026-10-31) and topic headers (2026-11-03)
+  matched a real native_std build of the sample mission once, by hand; no
+  test guards either. The tests check topic headers only through cfsam's own
+  C macro evaluator, not a compiler.
 - A generated header in `<MISSION_DEFS>/` loses to an existing override of
   the same file in `<defs>/config/` or `<defs>/cfe/`; generate does not warn.
 
 ## Next
 
-1. Build check of the topic headers (Rico): copy the 17 generated
-   `*_topicid_values.h` (e.g. `/tmp/claude-1000/coretidgen/out/`, or rerun
-   `cfsam generate`) into `sample_defs/` of the bundle (or a copy), run
-   `make native_std.prep && make native_std.install`, confirm it builds and
-   the "Using file:" lines name the copied headers, then remove them again.
-2. Not yet chosen; Rico picks. Candidates:
+1. Not yet chosen; Rico picks. Candidates:
+   - (Recommended) Warn in `generate`/`validate` when the mission already
+     has an override in `<defs>/config/` or `<defs>/cfe/` that would shadow
+     a generated header (see Limitations); via the `add-validation-rule`
+     skill.
    - A test fixture of the built startup script
-     (`build-native_std/exe/{cpu1,cpu2}/cf/cfe_es_startup.scr` from
-     2026-10-31 still exists).
-   - Warn in `generate`/`validate` when the mission already has an override
-     that would shadow a generated header.
+     (`build-native_std/exe/{cpu1,cpu2}/cf/cfe_es_startup.scr`, rebuilt
+     2026-11-03 with the generated topic headers).
 
-## Build comparison (2026-10-31)
+## Build comparison (2026-11-03): topic headers
+
+- Rico copied the 17 generated headers (`/tmp/claude-1000/coretidgen/out/`,
+  unchanged since generation) into the bundle's `sample_defs/`, ran
+  `make native_std.prep` / `make native_std.install` outside Claude Code
+  (logs `/tmp/cfsam-prep.log`, `/tmp/cfsam-install.log`), then removed them.
+  Build succeeded; 17 `Using file: .../sample_defs/<stem>_topicid_values.h`
+  lines, one per header (core ones for `<m>_topicid_values.h`).
+- Preprocessor check: for each CPU and owning module, `gcc -E` of a probe
+  including `<stem>_msgids.h` with that module's flags from
+  `build-native_std/native/default_<cpu>/compile_commands.json` and copies of
+  the build's generated `inc/` dirs (wrappers repointed from the removed
+  `sample_defs/` copies to the identical `out/` files). All 194 MIDs (97 per
+  CPU, 18 owners, 30 core) equal `cpus[].mids` of the trial mission.yaml.
+  Mutation (ES `CMD` 0x06 → 0x3F) changes exactly `CFE_ES_CMD_MID`
+  (0x183F / 0x193F), so the check is not vacuous.
+- Built tables (`exe/<cpu>/cf/*.tbl`, data after the 116-byte headers, LE
+  uint32): `sch_lab_table.tbl` (from `sample_defs/tables/sch_lab_table.c`)
+  holds all 22 entries in order with cfsam's values on both CPUs, incl. the
+  5 core `SEND_HK` MIDs. A word scan of to_lab_sub*, hk_cpy_tbl,
+  ds_filter_tbl, cf_def_config finds cfsam MIDs of their own CPU (core
+  `HK_TLM` ones included) and none of the other CPU's, except: cpu2's
+  `sbn_remap_tbl.tbl` has 0x0883 (cpu1 `SAMPLE_APP_HK_TLM_MID`): a literal in
+  `apps/sbn/modules/filter/remap/fsw/tables/sbn_remap_tbl.c:24`, not from a
+  header.
+- Scripts (not durable): `/tmp/claude-1000/midcmp/compare.py`,
+  `scan_tbl.py`, `sch_order.py`.
+
+## Build comparison (2026-10-31): startup scripts
 
 - Rico ran `make native_std.prep && make native_std.install` outside Claude
   Code (a `!` command runs in this session's sandbox, which cannot write the
