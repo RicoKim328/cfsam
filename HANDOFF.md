@@ -1,16 +1,17 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# Handoff (core module topic headers, 2026-11-03)
+# Handoff (after core module topic header merge, 2026-11-03)
 
 Rewrite this file when a task finishes. Items under "Awaiting approval" are
 not approvals; ask Rico.
 
 ## State
 
-- Branch `worktree-core-topicid-gen` (worktree
-  `.claude/worktrees/core-topicid-gen`), based on `main` @ `41d3ea6`, draft
-  PR open: `generate` writes core module topic ID headers. Waits for Rico's
-  review/merge. After the merge Rico removes the branch (remote and local)
-  and the worktree outside Claude Code.
+- `main` @ `c569847` (PR #17 merged: `generate` writes core module topic ID
+  headers). No task in progress.
+- Leftovers for Rico to clean up outside Claude Code: remote branch
+  `worktree-core-topicid-gen`; worktree `.claude/worktrees/core-topicid-gen`
+  (now on branch `handoff-post-core-topicid-gen`) and the merged local
+  branch `worktree-core-topicid-gen`.
 - `src/cfsam/`: `cmake.py`, `cpp.py`, `importer.py`, `yamlout.py`,
   `validate.py`, `generate.py`, `cli.py`:
   - `cfsam import <bundle> [-o mission.yaml]`
@@ -118,7 +119,8 @@ not approvals; ask Rico.
 - 2026-11-03: Core module MIDs imported; schema shape chosen by Rico:
   separate top-level `core_modules`, core MIDs in `cpus[].mids` with
   `app: <module>`.
-- 2026-11-03: Core module topic headers (Rico said go on the plan). Written
+- 2026-11-03: Core module topic headers (Rico approved the plan; PR #17,
+  reviewed and merged by Rico). Written
   as `cfe_<m>_topicid_values.h` (the module's own config name, highest
   priority in `<defs>/`); literal macros prefixed `CFSAM_CFE_<M>_` (file
   stem, so no clash with an app named like a core module).
@@ -168,12 +170,12 @@ not approvals; ask Rico.
 
 ## Next
 
-1. Rico: review and merge the draft PR (core module topic headers).
-2. Build check of the topic headers (Rico): copy the 17 generated
-   `*_topicid_values.h` into `sample_defs/` of the bundle (or a copy), run
+1. Build check of the topic headers (Rico): copy the 17 generated
+   `*_topicid_values.h` (e.g. `/tmp/claude-1000/coretidgen/out/`, or rerun
+   `cfsam generate`) into `sample_defs/` of the bundle (or a copy), run
    `make native_std.prep && make native_std.install`, confirm it builds and
    the "Using file:" lines name the copied headers, then remove them again.
-3. Not yet chosen; Rico picks. Candidates:
+2. Not yet chosen; Rico picks. Candidates:
    - A test fixture of the built startup script
      (`build-native_std/exe/{cpu1,cpu2}/cf/cfe_es_startup.scr` from
      2026-10-31 still exists).
