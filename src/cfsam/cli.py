@@ -62,7 +62,10 @@ def main(argv: list[str] | None = None) -> int:
     val.add_argument("mission", type=Path, help="mission.yaml written by cfsam import")
     gen = sub.add_parser(
         "generate",
-        help="write <dir>/<cpu>/cfe_es_startup.scr and <dir>/<app>_topicid_values.h from a valid mission.yaml",
+        help=(
+            "write <dir>/<cpu>/cfe_es_startup.scr, <dir>/<app>_topicid_values.h and"
+            " <dir>/cfe_<module>_topicid_values.h from a valid mission.yaml"
+        ),
     )
     gen.add_argument("mission", type=Path, help="mission.yaml written by cfsam import")
     gen.add_argument("-o", "--output", type=Path, required=True, help="output directory (not the cFS tree)")
