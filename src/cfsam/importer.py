@@ -83,6 +83,7 @@ def import_mission(root: Path, mission_config: str = "sample", simulation: str =
         topic_macros[name] = table
         apps.append({"name": name, "path": bundle.rel(app_dir), "tidval": tidval, "topics": topics})
 
+    core_modules, core_topics = _core_modules(bundle, ev, search_path)
     core_api = _locate_module(bundle, ev, search_path, "core_api")
     sb = _locate_module(bundle, ev, search_path, "sb")
     core_apps = _core_apps(bundle, ev, search_path)
@@ -93,6 +94,10 @@ def import_mission(root: Path, mission_config: str = "sample", simulation: str =
         core = _core_macros(bundle, core_api, prefixes)
         mid_base = _mid_bases(bundle, core, cpu["name"])
         mids = []
+        for module in core_modules:
+            name = module["name"]
+            module_dir = bundle.root / module["path"]
+            mids += _app_mids(bundle, name, module_dir, prefixes, core, core_topics[name], cpu["name"], f"cfe_{name}")
         for name in cpu["apps"]:
             if app_dirs[name] is not None:
                 mids += _app_mids(bundle, name, app_dirs[name], prefixes, core, topic_macros[name], cpu["name"])
@@ -119,6 +124,7 @@ def import_mission(root: Path, mission_config: str = "sample", simulation: str =
             "spacecraft_id": _int_or_text(spacecraft) if spacecraft is not None else None,
         },
         "core_apps": core_apps,
+        "core_modules": core_modules,
         "apps": apps,
         "cpus": out_cpus,
     }
@@ -252,14 +258,18 @@ def _tidval(bundle: Bundle, name: str, header: cpp.Header, topic_macros: list[tu
     return None
 
 
-def _app_topics(bundle: Bundle, name: str, app_dir: Path) -> tuple[cpp.MacroTable, list[dict], str | None]:
+def _app_topics(
+    bundle: Bundle, name: str, app_dir: Path, stem: str | None = None
+) -> tuple[cpp.MacroTable, list[dict], str | None]:
+    # stem: file name prefix, "cfe_<m>" for core modules (cfe/modules/es/fsw/inc/cfe_es_topicids.h).
+    stem = stem or name
     table = cpp.MacroTable()
-    topicids = app_dir / "fsw" / "inc" / f"{name}_topicids.h"
+    topicids = app_dir / "fsw" / "inc" / f"{stem}_topicids.h"
     if not topicids.is_file():
         return table, [], None
     header = cpp.read_header(topicids, bundle.rel(topicids))
     table.add(header.macros)
-    values = _locate_config(bundle, app_dir, f"{name}_topicid_values.h", [], mission_level=True)
+    values = _locate_config(bundle, app_dir, f"{stem}_topicid_values.h", [], mission_level=True)
     if values is not None:
         _read_with_includes(bundle, values, table)
 
@@ -278,6 +288,32 @@ def _app_topics(bundle: Bundle, name: str, app_dir: Path) -> tuple[cpp.MacroTabl
             continue
         topics.append({"name": m.group(1), "topic_id": Hex(value, 2)})
     return table, topics, _tidval(bundle, name, header, topic_macros)
+
+
+def _core_modules(
+    bundle: Bundle, ev: cmake.Evaluator, search_path: list[str]
+) -> tuple[list[dict], dict[str, cpp.MacroTable]]:
+    """Topic IDs of the cFE core modules that own SB messages.
+
+    Each of ``${MISSION_CORE_MODULES}`` (cfe/cmake/mission_defaults.cmake:27-40)
+    with a fsw/inc/cfe_<m>_topicids.h is laid out like an app: the mission-level
+    cfe_<m>_topicid_values.h (cfe/modules/es/mission_build.cmake) and the per-CPU
+    cfe_<m>_msgids.h / cfe_<m>_msgid_values.h (cfe/modules/es/arch_build.cmake).
+    Modules without one (config, fs, msg, ...) own no MIDs and are skipped.
+    """
+    modules = []
+    tables = {}
+    for name in ev.get_list("MISSION_CORE_MODULES"):
+        module_dir = _locate_module(bundle, ev, search_path, name)
+        if module_dir is None:
+            bundle.warn(f"core module {name} not found in module search path; its topics and MIDs are not imported")
+            continue
+        if not (module_dir / "fsw" / "inc" / f"cfe_{name}_topicids.h").is_file():
+            continue
+        table, topics, tidval = _app_topics(bundle, name, module_dir, f"cfe_{name}")
+        tables[name] = table
+        modules.append({"name": name, "path": bundle.rel(module_dir), "tidval": tidval, "topics": topics})
+    return modules, tables
 
 
 def _core_macros(bundle: Bundle, core_api: Path | None, prefixes: list[str]) -> cpp.MacroTable:
@@ -336,14 +372,16 @@ def _app_mids(
     core: cpp.MacroTable,
     topics: cpp.MacroTable,
     cpu: str,
+    stem: str | None = None,
 ) -> list[dict]:
-    msgids = _locate_config(bundle, app_dir, f"{name}_msgids.h", prefixes, mission_level=False)
+    stem = stem or name
+    msgids = _locate_config(bundle, app_dir, f"{stem}_msgids.h", prefixes, mission_level=False)
     if msgids is None:
         return []
     table = cpp.MacroTable()
     header = cpp.read_header(msgids, bundle.rel(msgids))
     _read_with_includes(bundle, msgids, table)
-    values = _locate_config(bundle, app_dir, f"{name}_msgid_values.h", prefixes, mission_level=False)
+    values = _locate_config(bundle, app_dir, f"{stem}_msgid_values.h", prefixes, mission_level=False)
     if values is not None:
         _read_with_includes(bundle, values, table)
     table.add(topics.macros)
