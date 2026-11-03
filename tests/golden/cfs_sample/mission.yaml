@@ -4,6 +4,56 @@ schema: cfsam.mission/v0
 variant: {simulation: native, eds: false}
 mission: {name: SampleMission, spacecraft_id: 0x42}
 core_apps: [CFE_ES, CFE_EVS, CFE_SB, CFE_TBL, CFE_TIME]
+core_modules:
+  - name: es
+    path: cfe/modules/es
+    tidval: CFE_MISSION_ES_TIDVAL
+    topics:
+      - {name: CMD, topic_id: 0x06}
+      - {name: SEND_HK, topic_id: 0x08}
+      - {name: HK_TLM, topic_id: 0x00}
+      - {name: APP_TLM, topic_id: 0x0B}
+      - {name: MEMSTATS_TLM, topic_id: 0x10}
+  - name: evs
+    path: cfe/modules/evs
+    tidval: CFE_MISSION_EVS_TIDVAL
+    topics:
+      - {name: CMD, topic_id: 0x01}
+      - {name: SEND_HK, topic_id: 0x09}
+      - {name: HK_TLM, topic_id: 0x01}
+      - {name: LONG_EVENT_MSG, topic_id: 0x08}
+      - {name: SHORT_EVENT_MSG, topic_id: 0x09}
+  - name: sb
+    path: cfe/modules/sb
+    tidval: CFE_MISSION_SB_TIDVAL
+    topics:
+      - {name: CMD, topic_id: 0x03}
+      - {name: SEND_HK, topic_id: 0x0B}
+      - {name: SUB_RPT_CTRL, topic_id: 0x0E}
+      - {name: HK_TLM, topic_id: 0x03}
+      - {name: STATS_TLM, topic_id: 0x0A}
+      - {name: ALLSUBS_TLM, topic_id: 0x0D}
+      - {name: ONESUB_TLM, topic_id: 0x0E}
+  - name: tbl
+    path: cfe/modules/tbl
+    tidval: CFE_MISSION_TBL_TIDVAL
+    topics:
+      - {name: CMD, topic_id: 0x04}
+      - {name: SEND_HK, topic_id: 0x0C}
+      - {name: HK_TLM, topic_id: 0x04}
+      - {name: REG_TLM, topic_id: 0x0C}
+  - name: time
+    path: cfe/modules/time
+    tidval: CFE_MISSION_TIME_TIDVAL
+    topics:
+      - {name: CMD, topic_id: 0x05}
+      - {name: SEND_HK, topic_id: 0x0D}
+      - {name: TONE_CMD, topic_id: 0x10}
+      - {name: ONEHZ_CMD, topic_id: 0x11}
+      - {name: DATA_CMD, topic_id: 0x00}
+      - {name: SEND_CMD, topic_id: 0x02}
+      - {name: HK_TLM, topic_id: 0x05}
+      - {name: DIAG_TLM, topic_id: 0x06}
 apps:
   - name: ci_lab
     path: null
@@ -112,6 +162,161 @@ cpus:
     mid_base: {platform_cmd: 0x1800, platform_tlm: 0x0800, global_cmd: 0x1860, global_tlm: 0x0860}
     sb_highest_valid_msgid: 0x1FFF
     mids:
+      - {name: CFE_ES_CMD_MID, app: es, topic: CMD, class: cmd, scope: platform, value: 0x1806}
+      - name: CFE_ES_SEND_HK_MID
+        app: es
+        topic: SEND_HK
+        class: cmd
+        scope: platform
+        value: 0x1808
+      - name: CFE_ES_HK_TLM_MID
+        app: es
+        topic: HK_TLM
+        class: tlm
+        scope: platform
+        value: 0x0800
+      - name: CFE_ES_APP_TLM_MID
+        app: es
+        topic: APP_TLM
+        class: tlm
+        scope: platform
+        value: 0x080B
+      - name: CFE_ES_MEMSTATS_TLM_MID
+        app: es
+        topic: MEMSTATS_TLM
+        class: tlm
+        scope: platform
+        value: 0x0810
+      - {name: CFE_EVS_CMD_MID, app: evs, topic: CMD, class: cmd, scope: platform, value: 0x1801}
+      - name: CFE_EVS_SEND_HK_MID
+        app: evs
+        topic: SEND_HK
+        class: cmd
+        scope: platform
+        value: 0x1809
+      - name: CFE_EVS_HK_TLM_MID
+        app: evs
+        topic: HK_TLM
+        class: tlm
+        scope: platform
+        value: 0x0801
+      - name: CFE_EVS_LONG_EVENT_MSG_MID
+        app: evs
+        topic: LONG_EVENT_MSG
+        class: tlm
+        scope: platform
+        value: 0x0808
+      - name: CFE_EVS_SHORT_EVENT_MSG_MID
+        app: evs
+        topic: SHORT_EVENT_MSG
+        class: tlm
+        scope: platform
+        value: 0x0809
+      - {name: CFE_SB_CMD_MID, app: sb, topic: CMD, class: cmd, scope: platform, value: 0x1803}
+      - name: CFE_SB_SEND_HK_MID
+        app: sb
+        topic: SEND_HK
+        class: cmd
+        scope: platform
+        value: 0x180B
+      - name: CFE_SB_SUB_RPT_CTRL_MID
+        app: sb
+        topic: SUB_RPT_CTRL
+        class: cmd
+        scope: platform
+        value: 0x180E
+      - name: CFE_SB_HK_TLM_MID
+        app: sb
+        topic: HK_TLM
+        class: tlm
+        scope: platform
+        value: 0x0803
+      - name: CFE_SB_STATS_TLM_MID
+        app: sb
+        topic: STATS_TLM
+        class: tlm
+        scope: platform
+        value: 0x080A
+      - name: CFE_SB_ALLSUBS_TLM_MID
+        app: sb
+        topic: ALLSUBS_TLM
+        class: tlm
+        scope: platform
+        value: 0x080D
+      - name: CFE_SB_ONESUB_TLM_MID
+        app: sb
+        topic: ONESUB_TLM
+        class: tlm
+        scope: platform
+        value: 0x080E
+      - {name: CFE_TBL_CMD_MID, app: tbl, topic: CMD, class: cmd, scope: platform, value: 0x1804}
+      - name: CFE_TBL_SEND_HK_MID
+        app: tbl
+        topic: SEND_HK
+        class: cmd
+        scope: platform
+        value: 0x180C
+      - name: CFE_TBL_HK_TLM_MID
+        app: tbl
+        topic: HK_TLM
+        class: tlm
+        scope: platform
+        value: 0x0804
+      - name: CFE_TBL_REG_TLM_MID
+        app: tbl
+        topic: REG_TLM
+        class: tlm
+        scope: platform
+        value: 0x080C
+      - {name: CFE_TIME_CMD_MID, app: time, topic: CMD, class: cmd, scope: platform, value: 0x1805}
+      - name: CFE_TIME_SEND_HK_MID
+        app: time
+        topic: SEND_HK
+        class: cmd
+        scope: platform
+        value: 0x180D
+      - name: CFE_TIME_TONE_CMD_MID
+        app: time
+        topic: TONE_CMD
+        class: cmd
+        scope: platform
+        value: 0x1810
+      - name: CFE_TIME_ONEHZ_CMD_MID
+        app: time
+        topic: ONEHZ_CMD
+        class: cmd
+        scope: platform
+        value: 0x1811
+      - name: CFE_TIME_DATA_CMD_MID
+        app: time
+        topic: DATA_CMD
+        class: cmd
+        scope: global
+        value: 0x1860
+      - name: CFE_TIME_SEND_CMD_MID
+        app: time
+        topic: SEND_CMD
+        class: cmd
+        scope: global
+        value: 0x1862
+      - name: CFE_TIME_HK_TLM_MID
+        app: time
+        topic: HK_TLM
+        class: tlm
+        scope: platform
+        value: 0x0805
+      - name: CFE_TIME_DIAG_TLM_MID
+        app: time
+        topic: DIAG_TLM
+        class: tlm
+        scope: platform
+        value: 0x0806
+      - name: CFE_TIME_1HZ_CMD_MID
+        app: time
+        topic: ONEHZ_CMD
+        class: cmd
+        scope: platform
+        value: 0x1811
       - name: SAMPLE_APP_CMD_MID
         app: sample_app
         topic: CMD
@@ -302,6 +507,161 @@ cpus:
     mid_base: {platform_cmd: 0x1900, platform_tlm: 0x0900, global_cmd: 0x1860, global_tlm: 0x0860}
     sb_highest_valid_msgid: 0x1FFF
     mids:
+      - {name: CFE_ES_CMD_MID, app: es, topic: CMD, class: cmd, scope: platform, value: 0x1906}
+      - name: CFE_ES_SEND_HK_MID
+        app: es
+        topic: SEND_HK
+        class: cmd
+        scope: platform
+        value: 0x1908
+      - name: CFE_ES_HK_TLM_MID
+        app: es
+        topic: HK_TLM
+        class: tlm
+        scope: platform
+        value: 0x0900
+      - name: CFE_ES_APP_TLM_MID
+        app: es
+        topic: APP_TLM
+        class: tlm
+        scope: platform
+        value: 0x090B
+      - name: CFE_ES_MEMSTATS_TLM_MID
+        app: es
+        topic: MEMSTATS_TLM
+        class: tlm
+        scope: platform
+        value: 0x0910
+      - {name: CFE_EVS_CMD_MID, app: evs, topic: CMD, class: cmd, scope: platform, value: 0x1901}
+      - name: CFE_EVS_SEND_HK_MID
+        app: evs
+        topic: SEND_HK
+        class: cmd
+        scope: platform
+        value: 0x1909
+      - name: CFE_EVS_HK_TLM_MID
+        app: evs
+        topic: HK_TLM
+        class: tlm
+        scope: platform
+        value: 0x0901
+      - name: CFE_EVS_LONG_EVENT_MSG_MID
+        app: evs
+        topic: LONG_EVENT_MSG
+        class: tlm
+        scope: platform
+        value: 0x0908
+      - name: CFE_EVS_SHORT_EVENT_MSG_MID
+        app: evs
+        topic: SHORT_EVENT_MSG
+        class: tlm
+        scope: platform
+        value: 0x0909
+      - {name: CFE_SB_CMD_MID, app: sb, topic: CMD, class: cmd, scope: platform, value: 0x1903}
+      - name: CFE_SB_SEND_HK_MID
+        app: sb
+        topic: SEND_HK
+        class: cmd
+        scope: platform
+        value: 0x190B
+      - name: CFE_SB_SUB_RPT_CTRL_MID
+        app: sb
+        topic: SUB_RPT_CTRL
+        class: cmd
+        scope: platform
+        value: 0x190E
+      - name: CFE_SB_HK_TLM_MID
+        app: sb
+        topic: HK_TLM
+        class: tlm
+        scope: platform
+        value: 0x0903
+      - name: CFE_SB_STATS_TLM_MID
+        app: sb
+        topic: STATS_TLM
+        class: tlm
+        scope: platform
+        value: 0x090A
+      - name: CFE_SB_ALLSUBS_TLM_MID
+        app: sb
+        topic: ALLSUBS_TLM
+        class: tlm
+        scope: platform
+        value: 0x090D
+      - name: CFE_SB_ONESUB_TLM_MID
+        app: sb
+        topic: ONESUB_TLM
+        class: tlm
+        scope: platform
+        value: 0x090E
+      - {name: CFE_TBL_CMD_MID, app: tbl, topic: CMD, class: cmd, scope: platform, value: 0x1904}
+      - name: CFE_TBL_SEND_HK_MID
+        app: tbl
+        topic: SEND_HK
+        class: cmd
+        scope: platform
+        value: 0x190C
+      - name: CFE_TBL_HK_TLM_MID
+        app: tbl
+        topic: HK_TLM
+        class: tlm
+        scope: platform
+        value: 0x0904
+      - name: CFE_TBL_REG_TLM_MID
+        app: tbl
+        topic: REG_TLM
+        class: tlm
+        scope: platform
+        value: 0x090C
+      - {name: CFE_TIME_CMD_MID, app: time, topic: CMD, class: cmd, scope: platform, value: 0x1905}
+      - name: CFE_TIME_SEND_HK_MID
+        app: time
+        topic: SEND_HK
+        class: cmd
+        scope: platform
+        value: 0x190D
+      - name: CFE_TIME_TONE_CMD_MID
+        app: time
+        topic: TONE_CMD
+        class: cmd
+        scope: platform
+        value: 0x1910
+      - name: CFE_TIME_ONEHZ_CMD_MID
+        app: time
+        topic: ONEHZ_CMD
+        class: cmd
+        scope: platform
+        value: 0x1911
+      - name: CFE_TIME_DATA_CMD_MID
+        app: time
+        topic: DATA_CMD
+        class: cmd
+        scope: global
+        value: 0x1860
+      - name: CFE_TIME_SEND_CMD_MID
+        app: time
+        topic: SEND_CMD
+        class: cmd
+        scope: global
+        value: 0x1862
+      - name: CFE_TIME_HK_TLM_MID
+        app: time
+        topic: HK_TLM
+        class: tlm
+        scope: platform
+        value: 0x0905
+      - name: CFE_TIME_DIAG_TLM_MID
+        app: time
+        topic: DIAG_TLM
+        class: tlm
+        scope: platform
+        value: 0x0906
+      - name: CFE_TIME_1HZ_CMD_MID
+        app: time
+        topic: ONEHZ_CMD
+        class: cmd
+        scope: platform
+        value: 0x1911
       - name: SAMPLE_APP_CMD_MID
         app: sample_app
         topic: CMD

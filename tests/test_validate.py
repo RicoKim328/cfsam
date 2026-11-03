@@ -66,6 +66,15 @@ def test_mid_alias_passes(model):
     assert validate(model) == []
 
 
+def test_mid_duplicate_with_core_module(model):
+    # Core module MIDs are imported too, so an app on CFE_ES_CMD_MID (topic 6) is caught.
+    cpu1 = model["cpus"][0]
+    cpu1["mids"].append(mid("OTHER_APP_CMD_MID", "other_app", "CMD", "cmd", 0x1806))
+    findings = validate(model)
+    assert [(f.rule, f.where) for f in findings] == [("mid-duplicate", "cpu1")]
+    assert "CFE_ES_CMD_MID (es)" in findings[0].message
+
+
 def test_mid_duplicate_unknown_topic(model):
     # Without a topic the message identity is unknown, so names count separately.
     cpu1 = model["cpus"][0]
@@ -136,8 +145,10 @@ def test_mid_cross_cpu(model):
 
 
 def test_mid_cross_cpu_skips_global_and_unknown_scope(model):
+    # The golden model already has the global CFE_TIME_DATA_CMD_MID 0x1860 on both CPUs.
     for cpu in model["cpus"]:
-        cpu["mids"].append(mid("TIME_DATA_CMD_MID", "cfe_time", "DATA_CMD", "cmd", 0x1860, scope="global"))
+        data_cmd = next(m for m in cpu["mids"] if m["name"] == "CFE_TIME_DATA_CMD_MID")
+        assert (data_cmd["scope"], data_cmd["value"]) == ("global", 0x1860)
         cpu["mids"].append(mid(f"SBN_{cpu['name']}_MID", "sbn", None, None, 0x18FA, scope=None))
     assert validate(model) == []
 

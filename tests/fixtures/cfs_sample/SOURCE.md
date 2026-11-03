@@ -18,6 +18,7 @@ the Apache-2.0 license apply; see `NOTICE`.
 | `cfe/modules/sb/config/default_cfe_sb_internal_cfg_values.h` | `CFE_PLATFORM_SB_CFGVAL(x)` → `DEFAULT_CFE_PLATFORM_SB_##x` (no override in `sample_defs`) |
 | `cfe/cmake/mission_defaults.cmake` | defaults evaluated before `targets.cmake` (`cfe_assert cfe_testcase` in the global app list, module search path, `MISSION_CORE_MODULES`) |
 | `cfe/modules/<m>/fsw/src/cfe_<m>_objtab.c` (config, es, evs, fs, sb, tbl, time, msg, sbr, resourceid) | core app names: entries with a `TaskMain` (ES, EVS, SB, TBL, TIME) |
+| `cfe/modules/<m>/fsw/inc/cfe_<m>_topicids.h`, `cfe/modules/<m>/config/default_cfe_<m>_{topicid_values,msgids,msgid_values}.h` (es, evs, sb, tbl, time) | core module topic IDs and MIDs (e.g. `CFE_ES_CMD_MID` 0x1806 on cpu1) |
 | `osal/CMakeLists.txt`, `psp/CMakeLists.txt` | make the `osal` and `psp` core modules locatable (no objtab) |
 | `apps/sample_app/fsw/src/sample_app.c` | definition of the startup entry `SAMPLE_APP_Main` (line 45) |
 

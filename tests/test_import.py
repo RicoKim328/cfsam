@@ -48,9 +48,58 @@ def test_sample_app_topics_and_mids(sample):
         "cpu2": {"SAMPLE_APP_CMD_MID": 0x1982, "SAMPLE_APP_SEND_HK_MID": 0x1983, "SAMPLE_APP_HK_TLM_MID": 0x0983},
     }
     for cpu in model["cpus"]:
-        assert {m["name"]: m["value"] for m in cpu["mids"]} == expected[cpu["name"]]
+        assert {m["name"]: m["value"] for m in cpu["mids"] if m["app"] == "sample_app"} == expected[cpu["name"]]
     hk = next(m for m in model["cpus"][0]["mids"] if m["name"] == "SAMPLE_APP_HK_TLM_MID")
     assert (hk["topic"], hk["class"], hk["scope"]) == ("HK_TLM", "tlm", "platform")
+
+
+def test_core_modules(sample):
+    model, _ = import_mission(sample)
+    # MISSION_CORE_MODULES entries with a cfe_<m>_topicids.h; config, fs, msg, ... have none.
+    assert [m["name"] for m in model["core_modules"]] == ["es", "evs", "sb", "tbl", "time"]
+    es = model["core_modules"][0]
+    assert es["path"] == "cfe/modules/es"
+    assert es["tidval"] == "CFE_MISSION_ES_TIDVAL"
+    assert {t["name"]: t["topic_id"] for t in es["topics"]} == {
+        "CMD": 0x06, "SEND_HK": 0x08, "HK_TLM": 0x00, "APP_TLM": 0x0B, "MEMSTATS_TLM": 0x10,
+    }
+
+
+def test_core_module_mids(sample):
+    model, _ = import_mission(sample)
+    cpu1, cpu2 = model["cpus"]
+    # Core MIDs come before the app MIDs.
+    assert cpu1["mids"][0]["app"] == "es"
+    es_cmd = {c["name"]: next(m for m in c["mids"] if m["name"] == "CFE_ES_CMD_MID") for c in (cpu1, cpu2)}
+    assert es_cmd["cpu1"] == {
+        "name": "CFE_ES_CMD_MID", "app": "es", "topic": "CMD", "class": "cmd", "scope": "platform", "value": 0x1806
+    }
+    assert es_cmd["cpu2"]["value"] == 0x1906
+    # TIME DATA_CMD and SEND_CMD are global: the same value on every CPU.
+    for cpu in (cpu1, cpu2):
+        mids = {m["name"]: m for m in cpu["mids"]}
+        assert (mids["CFE_TIME_DATA_CMD_MID"]["scope"], mids["CFE_TIME_DATA_CMD_MID"]["value"]) == ("global", 0x1860)
+        assert mids["CFE_TIME_SEND_CMD_MID"]["value"] == 0x1862
+        # CFE_TIME_1HZ_CMD_MID is an alias of CFE_TIME_ONEHZ_CMD_MID.
+        assert mids["CFE_TIME_1HZ_CMD_MID"]["topic"] == mids["CFE_TIME_ONEHZ_CMD_MID"]["topic"] == "ONEHZ_CMD"
+
+
+def test_core_topicid_values_override(sample_copy):
+    # Mission-level cfe_* files also match without the cfe_ prefix
+    # (cfe/cmake/global_functions.cmake:201-204); the full name works too.
+    (sample_copy / "sample_defs/cfe_es_topicid_values.h").write_text(
+        "#define CFE_MISSION_ES_TIDVAL(x) (0x40 + DEFAULT_CFE_MISSION_ES_##x##_TOPICID)\n"
+    )
+    model, _ = import_mission(sample_copy)
+    assert model["core_modules"][0]["topics"][0] == {"name": "CMD", "topic_id": 0x46}
+    assert [m["value"] for m in model["cpus"][0]["mids"] if m["name"] == "CFE_ES_CMD_MID"] == [0x1846]
+
+
+def test_core_module_missing_is_warning(sample_copy):
+    shutil.rmtree(sample_copy / "cfe/modules/evs")
+    model, warnings = import_mission(sample_copy)
+    assert [m["name"] for m in model["core_modules"]] == ["es", "sb", "tbl", "time"]
+    assert any("core module evs not found" in w and "MIDs are not imported" in w for w in warnings)
 
 
 def test_startup_entries(sample):
@@ -143,7 +192,7 @@ def test_cpu_specific_msgids_override(sample_copy):
     model, _ = import_mission(sample_copy)
     cpu1, cpu2 = model["cpus"]
     assert [m["value"] for m in cpu1["mids"] if m["name"] == "SAMPLE_APP_CMD_MID"] == [0x1882]
-    assert cpu2["mids"] == [
+    assert [m for m in cpu2["mids"] if m["app"] == "sample_app"] == [
         {"name": "SAMPLE_APP_CMD_MID", "app": "sample_app", "topic": None, "class": None, "scope": None, "value": 0x1999}
     ]
 
