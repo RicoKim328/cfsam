@@ -1,16 +1,18 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
-# Handoff (core module MIDs, 2026-11-03)
+# Handoff (after core module MID merge, 2026-11-03)
 
 Rewrite this file when a task finishes. Items under "Awaiting approval" are
 not approvals; ask Rico.
 
 ## State
 
-- `main` @ `e2baf6c` (PR #14 merged). Remote branches other than `main` are
-  gone. The directory `.claude/worktrees/startup-checks` is no longer a git
-  worktree (sandbox placeholders only); Rico may delete it.
-- Branch `worktree-core-mids`, worktree `.claude/worktrees/core-mids`: core
-  module MID import below (PR pending review).
+- `main` @ `cd0da89` (PR #15 merged: core module topic IDs and MIDs). No task
+  in progress.
+- Leftovers for Rico to clean up outside Claude Code: remote branch
+  `worktree-core-mids`; worktree `.claude/worktrees/core-mids` (now on branch
+  `handoff-post-core-mids`) and the merged local branch `worktree-core-mids`;
+  the directory `.claude/worktrees/startup-checks` (no longer a git worktree,
+  sandbox placeholders only).
 - `src/cfsam/`: `cmake.py`, `cpp.py`, `importer.py`, `yamlout.py`,
   `validate.py`, `generate.py`, `cli.py`:
   - `cfsam import <bundle> [-o mission.yaml]`
@@ -167,8 +169,7 @@ not approvals; ask Rico.
 
 ## Next
 
-1. Rico reviews the `worktree-core-mids` PR and merges it.
-2. Candidates (Rico picks):
+1. Not yet chosen; Rico picks. Candidates:
    - Core module topic headers: `generate` writes `cfe_<m>_topicid_values.h`
      from `core_modules` (the data is now in the model).
    - A test fixture of the built startup script
